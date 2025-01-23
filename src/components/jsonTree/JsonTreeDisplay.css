@@ -1,0 +1,39 @@
+/* General table container styling */
+.json-table-container table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 16px;
+  }
+  
+  .json-table-container table td,
+  .json-table-container table th {
+    background-color: #242C4B;
+    color: white;
+    padding: 10px;
+    border: 1px solid #394162;
+  }
+  
+  /* Styling for the keys */
+  .json-table-container table td:first-child {
+    text-transform: uppercase;
+    font-size: 20px; /* Increased font size for keys */
+    width: 300px; /* Set a wider column width for keys */
+  }
+  
+  /* Styling for the values */
+  .json-table-container table td:last-child {
+    font-size: 18px; /* Increased font size for values */
+    color: #E8E8E8; /* Slightly lighter text color for values */
+  }
+  
+  /* Nested tables styling */
+  .nested-table {
+    width: 90%; /* Slightly narrower than parent */
+    margin-left: 20px; /* Indentation for nested tables */
+    border: 1px solid #394162;
+  }
+  
+  .nested-table td {
+    background-color: #1E253F; /* Different background for nested */
+  }
+  

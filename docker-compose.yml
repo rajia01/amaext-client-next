@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  plugins-dashboard-frontend:
+    image: infodev0201/plugins-dashboard:dev-1.0.1-arm
+    container_name: plugins-dashboard-frontend
+    env_file:
+      - .env_frontend
+    ports:
+      - "3002:3002"
+    restart: on-failure
