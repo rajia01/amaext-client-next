@@ -13,7 +13,7 @@ import {
   Tooltip,
   Button,
 } from '@chakra-ui/react';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { FaEye } from 'react-icons/fa';
 import { GrTooltip } from 'react-icons/gr'; // Fixed GrTooltip import
 import { getSkeleton } from 'utils/skeleton';
@@ -67,7 +67,7 @@ const NullRecords: React.FC<NullRecordsProps> = ({
     isError,
     error,
   } = useQuery({
-    queryKey: ['nullRecords', columnName],
+    queryKey: ['nullRecords', columnName, currentPage],
     queryFn: () => fetchNullRecords(columnName, currentPage),
   });
 
@@ -97,6 +97,12 @@ const NullRecords: React.FC<NullRecordsProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (taskId && columnName) {
+      // fetchNullRecords(columnName, currentPage);
+    }
+  }, [currentPage, taskId]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       <div
@@ -122,7 +128,7 @@ const NullRecords: React.FC<NullRecordsProps> = ({
               </Thead>
               <Tbody>
                 {isLoading ? (
-                  getSkeleton(5)
+                  getSkeleton(5, 6)
                 ) : isError ? (
                   <Tr>
                     <Td colSpan={6}>

@@ -22,6 +22,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { FaEye } from 'react-icons/fa';
 import NullRecords from './NullRecords';
+import { getSkeleton } from 'utils/skeleton';
 
 interface CommentData {
   column_name: string;
@@ -55,7 +56,7 @@ const Page: React.FC = () => {
   // Fetch Paginated Data using TanStack Query and Axios
   const fetchPaginatedData = async (page: number) => {
     const response = await axios.get(
-      `http://localhost:8000/${seller_table}/task_id/${taskId}`,
+      `http://localhost:8000/${product_list}/task_id/${taskId}`,
       {
         params: { page_no: page, page_per: rowsPerPage },
       },
@@ -79,7 +80,7 @@ const Page: React.FC = () => {
   // Fetch Comment Count
   const getCommentCount = async () => {
     const response = await axios.get(
-      `http://localhost:8000/${seller_table}/${taskId}/total-comments`,
+      `http://localhost:8000/${product_list}/${taskId}/total-comments`,
     );
 
     // Parse the stringified JSON object inside total_comments_by_columns
@@ -132,17 +133,6 @@ const Page: React.FC = () => {
     }
   };
 
-  // Loading Skeleton
-  const getSkeleton = (count: number) => (
-    <Tr>
-      <Td colSpan={5}>
-        {Array.from({ length: count }).map((_, i) => (
-          <Skeleton key={i} height="53px" mb={2} rounded="md" w="100%" />
-        ))}
-      </Td>
-    </Tr>
-  );
-
   return (
     <>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -181,7 +171,7 @@ const Page: React.FC = () => {
               </Thead>
               <Tbody>
                 {isPaginatedDataLoading
-                  ? getSkeleton(rowsPerPage)
+                  ? getSkeleton(rowsPerPage, 5)
                   : paginatedData?.items?.map((item, index) => (
                       <Tr key={index}>
                         <Td>{(currentPage - 1) * rowsPerPage + index + 1}</Td>
@@ -252,7 +242,7 @@ const Page: React.FC = () => {
             <NullRecords
               taskId={taskId}
               columnName={selectedColumn}
-              tableName={seller_table}
+              tableName={product_list}
             />
           </div>
         )}

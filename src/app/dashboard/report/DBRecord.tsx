@@ -15,6 +15,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import NextLink from 'next/link';
 import { getDataView } from 'utils/api/report';
+import { getSkeleton } from 'utils/skeleton';
 
 interface DbRecordProps {
   tableName: string;
@@ -23,7 +24,7 @@ interface DbRecordProps {
 }
 
 interface DataItem {
-  [key: string]: any;
+  [key: string]: string | number | null | undefined;
 }
 
 const DbRecord: React.FC<DbRecordProps> = ({ tableName, taskId, recordId }) => {
@@ -46,16 +47,6 @@ const DbRecord: React.FC<DbRecordProps> = ({ tableName, taskId, recordId }) => {
     return regex.test(str);
   };
 
-  const getSkeleton = (count: number) => (
-    <Tr>
-      <Td colSpan={2}>
-        {Array.from({ length: count }).map((_, i) => (
-          <Skeleton key={i} height="53px" mb={2} rounded="md" w="100%" />
-        ))}
-      </Td>
-    </Tr>
-  );
-
   if (isDbLoading) {
     return (
       <div
@@ -76,7 +67,7 @@ const DbRecord: React.FC<DbRecordProps> = ({ tableName, taskId, recordId }) => {
                 <Th>Value</Th>
               </Tr>
             </Thead>
-            <Tbody>{getSkeleton(5)}</Tbody>
+            <Tbody>{getSkeleton(5, 2)}</Tbody>
           </Table>
         </TableContainer>
       </div>
@@ -108,6 +99,7 @@ const DbRecord: React.FC<DbRecordProps> = ({ tableName, taskId, recordId }) => {
                 Object.entries(data).map(([key, value], idx) => {
                   const isInvalidValue =
                     value === '' || value === null || value === 'undefined';
+
                   return (
                     <Tr key={idx}>
                       <Td
@@ -119,13 +111,11 @@ const DbRecord: React.FC<DbRecordProps> = ({ tableName, taskId, recordId }) => {
                       </Td>
                       <Td
                         className="py-3 px-6 text-sm"
-                        sx={{
-                          color: isInvalidValue ? 'red.500' : 'inherit',
+                        style={{
+                          color: isInvalidValue ? 'red' : 'inherit',
                         }}
                       >
-                        {typeof value === 'string' &&
-                        isValidUrl(value) &&
-                        !value.startsWith('http') ? (
+                        {typeof value === 'string' && isValidUrl(value) ? (
                           <Link
                             as={NextLink}
                             href={value}
@@ -138,21 +128,11 @@ const DbRecord: React.FC<DbRecordProps> = ({ tableName, taskId, recordId }) => {
                                 color: 'orange.800', // Dark mode styling
                               },
                             }}
+                            isExternal
                           >
                             {value}
                           </Link>
-                        ) : typeof value === 'string' && isValidUrl(value) ? (
-                          <Link variant="brandPrimary" href={value} isExternal>
-                            <span
-                              style={{
-                                textDecoration: 'underline',
-                                fontStyle: 'italic',
-                              }}
-                            >
-                              {value}
-                            </span>
-                          </Link>
-                        ) : typeof value === 'string' ? (
+                        ) : value ? (
                           value
                         ) : (
                           'undefined'
@@ -163,7 +143,9 @@ const DbRecord: React.FC<DbRecordProps> = ({ tableName, taskId, recordId }) => {
                 })
               ) : (
                 <Tr>
-                  <Td colSpan={2}>No data available</Td>
+                  <Td colSpan={2} className="text-center">
+                    No data available
+                  </Td>
                 </Tr>
               )}
             </Tbody>
