@@ -17,6 +17,8 @@ import NextLink from 'next/link';
 import { getDataView } from 'utils/api/report';
 
 interface DbRecordProps {
+  tableName: string;
+  taskId: number;
   recordId: string;
 }
 
@@ -24,14 +26,16 @@ interface DataItem {
   [key: string]: any;
 }
 
-const DbRecord: React.FC<DbRecordProps> = ({ recordId }) => {
+const DbRecord: React.FC<DbRecordProps> = ({ tableName, taskId, recordId }) => {
+  console.log('Record ID: ', recordId);
+
   const {
     data: DbViewList,
     isLoading: isDbLoading,
     isSuccess: isDbSuccess,
   } = useQuery<DataItem>({
     queryKey: ['tableData', recordId],
-    queryFn: () => getDataView(recordId),
+    queryFn: () => getDataView(tableName, taskId, recordId),
     refetchOnWindowFocus: false,
   });
 
@@ -119,7 +123,9 @@ const DbRecord: React.FC<DbRecordProps> = ({ recordId }) => {
                           color: isInvalidValue ? 'red.500' : 'inherit',
                         }}
                       >
-                        {isValidUrl(value) && !value.startsWith('http') ? (
+                        {typeof value === 'string' &&
+                        isValidUrl(value) &&
+                        !value.startsWith('http') ? (
                           <Link
                             as={NextLink}
                             href={value}
@@ -135,7 +141,7 @@ const DbRecord: React.FC<DbRecordProps> = ({ recordId }) => {
                           >
                             {value}
                           </Link>
-                        ) : isValidUrl(value) ? (
+                        ) : typeof value === 'string' && isValidUrl(value) ? (
                           <Link variant="brandPrimary" href={value} isExternal>
                             <span
                               style={{
@@ -146,7 +152,7 @@ const DbRecord: React.FC<DbRecordProps> = ({ recordId }) => {
                               {value}
                             </span>
                           </Link>
-                        ) : value ? (
+                        ) : typeof value === 'string' ? (
                           value
                         ) : (
                           'undefined'

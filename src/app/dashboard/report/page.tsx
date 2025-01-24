@@ -60,7 +60,7 @@ const Page: React.FC = () => {
         params: { page_no: page, page_per: rowsPerPage },
       },
     );
-    // console.log(response.data);
+    console.log('Data: ', response.data);
 
     setTotalCount(response.data.total_count);
 

@@ -1,9 +1,15 @@
 import axios from 'axios';
 
-export const getDataView = async (id: string) => {
+export const getDataView = async (
+  tableName: string,
+  taskId: number,
+  id: string,
+) => {
   try {
-    const response = await axios.get(`http://localhost:8000/sr/${id}`);
-    console.log(response.data);
+    const response = await axios.get(
+      `http://localhost:8000/${tableName}/${taskId}/sr/${id}`,
+    );
+    console.log('DB Record: ', response.data);
     return response.data;
   } catch (error) {
     console.error('Error fetching data:', error);

@@ -261,7 +261,11 @@ const NullRecords: React.FC<NullRecordsProps> = ({
       <div>
         {selectedRecordId && (
           <div ref={dbViewRef}>
-            <DBRecord recordId={selectedRecordId} />
+            <DBRecord
+              tableName={tableName}
+              taskId={taskId}
+              recordId={selectedRecordId}
+            />
           </div>
         )}
       </div>
