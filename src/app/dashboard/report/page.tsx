@@ -50,7 +50,7 @@ const Page: React.FC = () => {
   const product_details = 'ddmapp_amazonproductdetailsnew_data_1028';
   const product_list = 'ddmapp_amazonproductlist_data_1028';
 
-  const tableName = product_list;
+  const tableName = product_details;
 
   // Fetch Paginated Data using TanStack Query and Axios
   const fetchPaginatedData = async (page: number) => {
@@ -205,41 +205,44 @@ const Page: React.FC = () => {
                 {isPaginatedDataLoading
                   ? getSkeleton(rowsPerPage, 5)
                   : paginatedData?.items?.map((item, index) => (
-                      <Tr key={index}>
-                        <Td>{(currentPage - 1) * rowsPerPage + index + 1}</Td>
-                        <Td>{item.column_name}</Td>
-                        <Td>
-                          <span
-                            style={{
-                              color: item.null_count > 0 ? 'red' : 'inherit',
-                            }}
-                          >
-                            {item.null_count}
-                          </span>{' '}
-                          / {totalCount}
-                        </Td>
-                        <Td>
+                    <Tr key={index}>
+                      <Td>{(currentPage - 1) * rowsPerPage + index + 1}</Td>
+                      <Td>{item.column_name}</Td>
+                      <Td>
+                        <span
+                          style={{
+                            color: item.null_count > 0 ? 'red' : 'inherit',
+                          }}
+                        >
+                          {item.null_count}
+                        </span>{' '}
+                        / {totalCount}
+                      </Td>
+                      <Td>
+                        {item.null_count == 0 ? <span style={{ color: 'gray' }}>Disabled</span> : (
                           <FaEye
                             style={{ cursor: 'pointer' }}
                             onClick={() => handleViewClick(item.column_name)}
                           />
-                        </Td>
-                        <Td>
-                          {commentCount[item.column_name] !== undefined
-                            ? commentCount[item.column_name]
-                            : 'NAN'}
-                        </Td>
-                      </Tr>
-                    ))}
+                        )}
+
+                      </Td>
+                      <Td>
+                        {commentCount[item.column_name] !== undefined
+                          ? commentCount[item.column_name]
+                          : 'NAN'}
+                      </Td>
+                    </Tr>
+                  ))}
               </Tbody>
 
               <Tfoot>
                 <Tr>
                   <Th>Total: {paginatedData?.total_items}</Th>
                   <Th></Th>
-                  <Th>Total: {}</Th>
+                  {/* <Th>Total: { }</Th>
                   <Th></Th>
-                  <Th>Total: {}</Th>
+                  <Th>Total: { }</Th> */}
                 </Tr>
               </Tfoot>
             </Table>
