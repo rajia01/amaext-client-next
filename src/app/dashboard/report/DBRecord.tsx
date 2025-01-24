@@ -28,7 +28,7 @@ interface DataItem {
 }
 
 const DbRecord: React.FC<DbRecordProps> = ({ tableName, taskId, recordId }) => {
-  console.log('Record ID: ', recordId);
+  // console.log('Record ID: ', recordId);
 
   const {
     data: DbViewList,
@@ -102,17 +102,10 @@ const DbRecord: React.FC<DbRecordProps> = ({ tableName, taskId, recordId }) => {
 
                   return (
                     <Tr key={idx}>
+                      <Td>{key}</Td>
                       <Td
-                        className={`py-3 px-6 text-sm text-gray-700 border-r border-gray-300 ${
-                          isInvalidValue ? 'font-bold' : ''
-                        }`}
-                      >
-                        {key}
-                      </Td>
-                      <Td
-                        className="py-3 px-6 text-sm"
                         style={{
-                          color: isInvalidValue ? 'red' : 'inherit',
+                          color: isInvalidValue ? '#FF033E' : 'inherit',
                         }}
                       >
                         {typeof value === 'string' && isValidUrl(value) ? (
@@ -125,7 +118,7 @@ const DbRecord: React.FC<DbRecordProps> = ({ tableName, taskId, recordId }) => {
                               fontFamily: 'serif',
                               fontWeight: 'normal',
                               _dark: {
-                                color: 'orange.800', // Dark mode styling
+                                color: 'yellow.400',
                               },
                             }}
                             isExternal
@@ -143,9 +136,7 @@ const DbRecord: React.FC<DbRecordProps> = ({ tableName, taskId, recordId }) => {
                 })
               ) : (
                 <Tr>
-                  <Td colSpan={2} className="text-center">
-                    No data available
-                  </Td>
+                  <Td colSpan={2}>No data available</Td>
                 </Tr>
               )}
             </Tbody>

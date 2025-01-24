@@ -19,8 +19,9 @@ import { GrTooltip } from 'react-icons/gr'; // Fixed GrTooltip import
 import { getSkeleton } from 'utils/skeleton';
 import { shortenUrl } from 'utils/urlShortner';
 import DBRecord from './DBRecord';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import axios from 'axios';
+import { getColumnwiseComments, postComment } from 'utils/api/report';
 
 interface NullRecordsProps {
   taskId: number;
@@ -29,6 +30,7 @@ interface NullRecordsProps {
 }
 
 interface Record {
+  id: any;
   ddmapp_amazonsellerdetails_data_1028_id: string;
   link: string;
   created_date: string;
@@ -43,7 +45,7 @@ const NullRecords: React.FC<NullRecordsProps> = ({
   tableName,
 }) => {
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
-  const [comment, setComment] = useState<string>(''); // State for comment input
+  const [comment, setComment] = useState<{ [id: number]: string }>({});
   const dbViewRef = useRef<HTMLDivElement>(null);
   const [rowsPerPage] = useState(7);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -71,6 +73,28 @@ const NullRecords: React.FC<NullRecordsProps> = ({
     queryFn: () => fetchNullRecords(columnName, currentPage),
   });
 
+  // const { data: comments} = useQuery({
+  //   queryKey: ['comments', tableName, taskId, columnName, srId],
+  //   queryFn: () => getColumnwiseComments(tableName, taskId, columnName, srId)
+  // });
+
+  // **************************************************************************************
+
+  const handleCommentSubmit = (srId: number, comment: string) => {
+    if (comment.trim()) {
+      console.log(`Submitting comment for record ${srId}: ${comment}`);
+
+      postComment(tableName, taskId, columnName, srId, comment);
+
+      setComment((prevComments) => ({
+        ...prevComments,
+        [srId]: '', // Clear the comment for the specific record
+      }));
+    }
+  };
+
+  // **************************************************************************************
+
   const handleViewDBRecord = (record_id: string) => {
     setSelectedRecordId(record_id);
     setTimeout(() => {
@@ -78,14 +102,6 @@ const NullRecords: React.FC<NullRecordsProps> = ({
         dbViewRef.current.scrollIntoView({ behavior: 'smooth' });
       }
     }, 200);
-  };
-
-  const handleCommentSubmit = () => {
-    if (comment.trim()) {
-      // Handle the comment submission here
-      console.log(`Submitting comment: ${comment}`);
-      setComment(''); // Clear comment input
-    }
   };
 
   const totalPages = records ? Math.ceil(records.total_items / rowsPerPage) : 0;
@@ -97,11 +113,25 @@ const NullRecords: React.FC<NullRecordsProps> = ({
     }
   };
 
+  // Fetch all comments for the null records
+  const { data: allComments } = useQuery({
+    queryKey: ['comments', tableName, taskId, columnName],
+    queryFn: () => getColumnwiseComments(tableName, taskId, columnName),
+  });
+
+  console.log('Comments: ', allComments);
+
   useEffect(() => {
     if (taskId && columnName) {
-      // fetchNullRecords(columnName, currentPage);
     }
   }, [currentPage, taskId]);
+
+  const handleCommentChange = (id: number, comment: string) => {
+    setComment(() => ({
+      // ...prevComments,
+      [id]: comment,
+    }));
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -119,7 +149,7 @@ const NullRecords: React.FC<NullRecordsProps> = ({
               <Thead>
                 <Tr>
                   <Th>Amazon Seller ID</Th>
-                  <Th>Link(sellerid_urlid)</Th>
+                  <Th>Link</Th>
                   <Th>Created Date</Th>
                   <Th>Modified Date</Th>
                   <Th>Date Difference</Th>
@@ -175,8 +205,10 @@ const NullRecords: React.FC<NullRecordsProps> = ({
                         >
                           <input
                             type="text"
-                            value={comment}
-                            onChange={(e) => setComment(e.target.value)}
+                            value={comment[record.id] || ''}
+                            onChange={(e) =>
+                              handleCommentChange(record.id, e.target.value)
+                            }
                             placeholder="Type your comment"
                             style={{
                               color: 'white',
@@ -197,11 +229,32 @@ const NullRecords: React.FC<NullRecordsProps> = ({
                               borderRadius: '4px',
                             }}
                           >
-                            0
+                            {allComments?.filter(
+                              (eachComment: any) =>
+                                eachComment.id === record.id,
+                            ).length || 0}
                           </span>
+
                           <Tooltip
-                            label={record.comments || 'No comments available'}
+                            label={
+                              allComments?.filter(
+                                (eachComment: any) =>
+                                  eachComment.id === record.id,
+                              ).length > 0
+                                ? allComments
+                                    .filter(
+                                      (eachComment: any) =>
+                                        eachComment.id === record.id,
+                                    )
+                                    .map(
+                                      (eachComment: any, index: number) =>
+                                        `${index + 1}. ${eachComment.comment}`,
+                                    )
+                                    .join(', ')
+                                : 'No comments available'
+                            }
                             placement="top"
+                            fontSize="1.2rem"
                           >
                             <button>
                               <GrTooltip
@@ -213,8 +266,11 @@ const NullRecords: React.FC<NullRecordsProps> = ({
                               />
                             </button>
                           </Tooltip>
+
                           <button
-                            onClick={handleCommentSubmit}
+                            onClick={() =>
+                              handleCommentSubmit(record.id, comment[record.id])
+                            }
                             style={{
                               fontSize: '0.8rem',
                               padding: '0.5rem 1rem',

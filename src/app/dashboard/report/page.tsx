@@ -6,7 +6,6 @@ import {
   FormControl,
   FormLabel,
   Input,
-  Skeleton,
   Table,
   TableContainer,
   Tbody,
@@ -18,8 +17,7 @@ import {
 } from '@chakra-ui/react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { FaEye } from 'react-icons/fa';
 import NullRecords from './NullRecords';
 import { getSkeleton } from 'utils/skeleton';
@@ -39,13 +37,12 @@ interface PaginatedData {
 }
 
 const Page: React.FC = () => {
-  const router = useRouter();
   const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
-  const [tableLoading, setTableLoading] = useState(true);
   const [rowsPerPage] = useState(7);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [taskId, setTaskId] = useState<number>();
   const [totalCount, setTotalCount] = useState<number>(0);
+  // const [tableName, setTableName] = useState<string>('');
 
   const nullRecordRef = useRef<HTMLDivElement>(null);
 
@@ -53,10 +50,12 @@ const Page: React.FC = () => {
   const product_details = 'ddmapp_amazonproductdetailsnew_data_1028';
   const product_list = 'ddmapp_amazonproductlist_data_1028';
 
+  const tableName = product_list;
+
   // Fetch Paginated Data using TanStack Query and Axios
   const fetchPaginatedData = async (page: number) => {
     const response = await axios.get(
-      `http://localhost:8000/${product_list}/task_id/${taskId}`,
+      `http://localhost:8000/${tableName}/task_id/${taskId}`,
       {
         params: { page_no: page, page_per: rowsPerPage },
       },
@@ -70,7 +69,7 @@ const Page: React.FC = () => {
 
   const { data: paginatedData, isLoading: isPaginatedDataLoading } =
     useQuery<PaginatedData>({
-      queryKey: ['paginatedData', currentPage],
+      queryKey: ['paginatedData', currentPage, taskId],
       queryFn: () => fetchPaginatedData(currentPage),
       enabled: !!taskId,
     });
@@ -80,7 +79,7 @@ const Page: React.FC = () => {
   // Fetch Comment Count
   const getCommentCount = async () => {
     const response = await axios.get(
-      `http://localhost:8000/${product_list}/${taskId}/total-comments`,
+      `http://localhost:8000/${tableName}/${taskId}/total-comments`,
     );
 
     // Parse the stringified JSON object inside total_comments_by_columns
@@ -109,12 +108,12 @@ const Page: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    if (taskId) {
-      fetchPaginatedData(currentPage);
-      // getCommentCount();
-    }
-  }, [currentPage, taskId]);
+  // useEffect(() => {
+  //   if (taskId) {
+  //     // fetchPaginatedData(currentPage);
+  //     // getCommentCount();
+  //   }
+  // }, [currentPage, taskId]);
 
   const handleViewClick = (columnName: string) => {
     // Scroll to the NullRecords component
@@ -129,14 +128,28 @@ const Page: React.FC = () => {
   const handleTaskIdKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       const inputValue = (e.target as HTMLInputElement).value;
-      setTaskId(Number(inputValue));
+      const newTaskId = Number(inputValue);
+
+      if (newTaskId !== taskId) {
+        setTaskId(newTaskId);
+        // Reset to the first page when taskId changes
+        setCurrentPage(1);
+      }
     }
   };
 
   return (
     <>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{ marginLeft: '2rem', marginTop: '2rem' }}>
+        <div
+          style={{
+            display: 'flex',
+            marginLeft: '2rem',
+            marginTop: '2rem',
+            justifyContent: 'flex-start',
+            gap: '0.3rem',
+          }}
+        >
           <FormControl>
             <FormLabel htmlFor="taskId" color="white">
               Task_ID
@@ -146,14 +159,33 @@ const Page: React.FC = () => {
               onKeyDown={handleTaskIdKeyPress}
               placeholder="Enter Task ID and press Enter"
               size="lg"
-              width="300px"
+              width="350px"
               borderColor="white"
               color="white"
               _placeholder={{ color: 'white' }}
               backgroundColor="transparent"
             />
-            ;
           </FormControl>
+
+          {/* <FormControl>
+            <FormLabel htmlFor="tableName" color="white">
+              Select Table
+            </FormLabel>
+            <Select
+              id="tableName"
+              value={tableName}
+              onChange={(e) => setTableName(e.target.value)}
+              width="400px"
+              size="lg"
+              borderColor="white"
+              color="white"
+              backgroundColor="transparent"
+            >
+              <option value={seller_table}>Seller Table</option>
+              <option value={product_details}>Product Details</option>
+              <option value={product_list}>Product List</option>
+            </Select>
+          </FormControl> */}
         </div>
 
         {/* Table */}
@@ -242,7 +274,7 @@ const Page: React.FC = () => {
             <NullRecords
               taskId={taskId}
               columnName={selectedColumn}
-              tableName={product_list}
+              tableName={tableName}
             />
           </div>
         )}
