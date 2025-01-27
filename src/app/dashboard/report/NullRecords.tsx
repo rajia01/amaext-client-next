@@ -11,7 +11,6 @@ import {
   Th,
   Thead,
   Tr,
-  Button,
   useColorMode,
   PopoverContent,
   Popover,
@@ -32,6 +31,7 @@ interface NullRecordsProps {
   taskId: number;
   columnName: string;
   tableName: string;
+  onClose: () => void;
 }
 
 interface Record {
@@ -48,6 +48,7 @@ const NullRecords: React.FC<NullRecordsProps> = ({
   taskId,
   columnName,
   tableName,
+  onClose,
 }) => {
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [comment, setComment] = useState<{ [id: number]: string }>({});
@@ -55,7 +56,6 @@ const NullRecords: React.FC<NullRecordsProps> = ({
   const [rowsPerPage] = useState(7);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const { colorMode } = useColorMode();
-
 
   // Fetch Null Records using TanStack Query and Axios
   const fetchNullRecords = async (columnName: string, page: number) => {
@@ -136,6 +136,14 @@ const NullRecords: React.FC<NullRecordsProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
+      {/* <Box> */}
+      {/* <Button onClick={onClose} colorScheme="red" size="sm" mb={4}> */}
+      {/* Close */}
+      {/* </Button> */}
+      {/* Add your existing NullRecords content here */}
+
+      {/* </Box> */}
+
       <div
         style={{ marginTop: '1rem', padding: '1rem', border: '1px solid #ccc' }}
       >
@@ -225,7 +233,12 @@ const NullRecords: React.FC<NullRecordsProps> = ({
                               border: '1px solid #ccc',
                               borderRadius: '4px',
                             }}
-                            className={colorMode === 'light' ? 'light-placeholder' : 'dark-placeholder'} />
+                            className={
+                              colorMode === 'light'
+                                ? 'light-placeholder'
+                                : 'dark-placeholder'
+                            }
+                          />
 
                           {/* Comment count */}
                           <span
@@ -257,16 +270,24 @@ const NullRecords: React.FC<NullRecordsProps> = ({
                               <PopoverArrow />
                               <PopoverBody
                                 dangerouslySetInnerHTML={{
-                                  __html: allComments?.filter(
-                                    (eachComment: any) => eachComment.id === record.id
-                                  ).length > 0
-                                    ? allComments
-                                        .filter((eachComment: any) => eachComment.id === record.id)
-                                        .map((eachComment: any, index: number) =>
-                                          `${index + 1}. ${eachComment.comment}`
-                                        )
-                                        .join('<br />')
-                                    : 'No comments available',
+                                  __html:
+                                    allComments?.filter(
+                                      (eachComment: any) =>
+                                        eachComment.id === record.id,
+                                    ).length > 0
+                                      ? allComments
+                                          .filter(
+                                            (eachComment: any) =>
+                                              eachComment.id === record.id,
+                                          )
+                                          .map(
+                                            (eachComment: any, index: number) =>
+                                              `${index + 1}. ${
+                                                eachComment.comment
+                                              }`,
+                                          )
+                                          .join('<br />')
+                                      : 'No comments available',
                                 }}
                               />
                             </PopoverContent>

@@ -44,7 +44,7 @@ const Page: React.FC = () => {
   const { colorMode } = useColorMode();
 
   // Table names
-  const seller_table = 'ddmapp_amazonsellerdetails_data';
+  const seller_table = 'ddmapp_amazonsellerdetails_data_1028';
   const product_details = 'ddmapp_amazonproductdetailsnew_data_1028';
   const product_list = 'ddmapp_amazonproductlist_data_1028';
 
@@ -131,7 +131,10 @@ const Page: React.FC = () => {
           }}
         >
           <FormControl>
-            <FormLabel htmlFor="taskId" color={colorMode === 'light' ? 'black' : 'white'}>
+            <FormLabel
+              htmlFor="taskId"
+              color={colorMode === 'light' ? 'black' : 'white'}
+            >
               Task_ID
             </FormLabel>
             <Input
@@ -199,7 +202,6 @@ const Page: React.FC = () => {
                   getSkeleton(rowsPerPage, 5)
                 ) : (
                   paginatedData?.items?.map((item, index) => (
-
                     <Tr key={index}>
                       <Td>{(currentPage - 1) * rowsPerPage + index + 1}</Td>
                       <Td>{item.column_name}</Td>
@@ -213,17 +215,22 @@ const Page: React.FC = () => {
                         </span>{' '}
                         / {totalCount}
                       </Td>
-                        <FaEye
-                          size={24}
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => handleViewClick(item.column_name)}
-                        />
-                        {item.null_count == 0 ? <span style={{ color: 'green.400' }}>Successful</span> : (
+                      <Td>
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
                           <FaEye
+                            size={24}
                             style={{ cursor: 'pointer' }}
                             onClick={() => handleViewClick(item.column_name)}
                           />
-                        )}
+                          {item.null_count === 0 ? (
+                            <span style={{ color: 'green' }}>Successful</span>
+                          ) : (
+                            <FaEye
+                              style={{ cursor: 'pointer' }}
+                              onClick={() => handleViewClick(item.column_name)}
+                            />
+                          )}
+                        </div>
                       </Td>
                       <Td>
                         {commentCount[item.column_name] !== undefined
@@ -233,6 +240,7 @@ const Page: React.FC = () => {
                     </Tr>
                   ))
                 )}
+              </Tbody>
 
               {paginatedData && (
                 <Tfoot>
@@ -280,10 +288,11 @@ const Page: React.FC = () => {
               taskId={taskId}
               columnName={selectedColumn}
               tableName={tableName}
+              onClose={() => setSelectedColumn(null)}
             />
           </div>
         )}
-      </div >
+      </div>
     </>
   );
 };
