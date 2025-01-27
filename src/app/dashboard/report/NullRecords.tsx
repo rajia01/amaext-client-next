@@ -10,8 +10,14 @@ import {
   Td,
   Th,
   Thead,
-  Tooltip,
   Tr,
+  Button,
+  useColorMode,
+  PopoverContent,
+  Popover,
+  PopoverBody,
+  PopoverArrow,
+  PopoverTrigger,
 } from '@chakra-ui/react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
@@ -48,6 +54,8 @@ const NullRecords: React.FC<NullRecordsProps> = ({
   const dbViewRef = useRef<HTMLDivElement>(null);
   const [rowsPerPage] = useState(7);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const { colorMode } = useColorMode();
+
 
   // Fetch Null Records using TanStack Query and Axios
   const fetchNullRecords = async (columnName: string, page: number) => {
@@ -82,13 +90,12 @@ const NullRecords: React.FC<NullRecordsProps> = ({
 
       setComment((prevComments) => ({
         ...prevComments,
-        [srId]: '', // Clear the comment for the specific record
+        [srId]: '',
       }));
     }
   };
 
   // **************************************************************************************
-
   const handleViewDBRecord = (record_id: string) => {
     setSelectedRecordId(record_id);
     setTimeout(() => {
@@ -210,7 +217,7 @@ const NullRecords: React.FC<NullRecordsProps> = ({
                             }
                             placeholder="Type your comment"
                             style={{
-                              color: 'white',
+                              color: colorMode === 'light' ? 'black' : 'white',
                               padding: '0.5rem',
                               marginRight: '0.5rem',
                               width: '60%',
@@ -218,7 +225,8 @@ const NullRecords: React.FC<NullRecordsProps> = ({
                               border: '1px solid #ccc',
                               borderRadius: '4px',
                             }}
-                          />
+                            className={colorMode === 'light' ? 'light-placeholder' : 'dark-placeholder'} />
+
                           {/* Comment count */}
                           <span
                             style={{
@@ -233,38 +241,36 @@ const NullRecords: React.FC<NullRecordsProps> = ({
                                 eachComment.id === record.id,
                             ).length || 0}
                           </span>
-
-                          <Tooltip
-                            label={
-                              allComments?.filter(
-                                (eachComment: any) =>
-                                  eachComment.id === record.id,
-                              ).length > 0
-                                ? allComments
-                                    .filter(
-                                      (eachComment: any) =>
-                                        eachComment.id === record.id,
-                                    )
-                                    .map(
-                                      (eachComment: any, index: number) =>
-                                        `${index + 1}. ${eachComment.comment}`,
-                                    )
-                                    .join(', ')
-                                : 'No comments available'
-                            }
-                            placement="top"
-                            fontSize="1.2rem"
-                          >
-                            <button>
-                              <GrTooltip
-                                style={{
-                                  fontSize: '1.8rem',
-                                  cursor: 'pointer',
-                                  color: '#007bff',
+                          <Popover trigger="hover" placement="top">
+                            <PopoverTrigger>
+                              <button>
+                                <GrTooltip
+                                  style={{
+                                    fontSize: '1.8rem',
+                                    cursor: 'pointer',
+                                    color: '#007bff',
+                                  }}
+                                />
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent>
+                              <PopoverArrow />
+                              <PopoverBody
+                                dangerouslySetInnerHTML={{
+                                  __html: allComments?.filter(
+                                    (eachComment: any) => eachComment.id === record.id
+                                  ).length > 0
+                                    ? allComments
+                                        .filter((eachComment: any) => eachComment.id === record.id)
+                                        .map((eachComment: any, index: number) =>
+                                          `${index + 1}. ${eachComment.comment}`
+                                        )
+                                        .join('<br />')
+                                    : 'No comments available',
                                 }}
                               />
-                            </button>
-                          </Tooltip>
+                            </PopoverContent>
+                          </Popover>
 
                           <button
                             onClick={() =>

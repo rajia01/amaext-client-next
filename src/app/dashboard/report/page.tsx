@@ -14,6 +14,7 @@ import {
   Th,
   Thead,
   Tr,
+  useColorMode,
 } from '@chakra-ui/react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
@@ -39,6 +40,8 @@ const Page: React.FC = () => {
   const [taskId, setTaskId] = useState<number>();
   const [totalCount, setTotalCount] = useState<number>(0);
   const nullRecordRef = useRef<HTMLDivElement>(null);
+  const taskIdInputRef = useRef<HTMLInputElement>(null);
+  const { colorMode } = useColorMode();
 
   // Table names
   const seller_table = 'ddmapp_amazonsellerdetails_data';
@@ -100,16 +103,14 @@ const Page: React.FC = () => {
     setSelectedColumn(columnName);
   };
 
-  const handleTaskIdKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      const inputValue = (e.target as HTMLInputElement).value;
-      const newTaskId = Number(inputValue);
+  const handleTaskIdKeyPress = () => {
+    const inputValue = taskIdInputRef.current?.value;
+    const newTaskId = Number(inputValue);
 
-      if (newTaskId !== taskId) {
-        setTaskId(newTaskId);
-        // Reset to the first page when taskId changes
-        setCurrentPage(1);
-      }
+    if (newTaskId !== taskId) {
+      setTaskId(newTaskId);
+      // Reset to the first page when taskId changes
+      setCurrentPage(1);
     }
   };
 
@@ -130,20 +131,31 @@ const Page: React.FC = () => {
           }}
         >
           <FormControl>
-            <FormLabel htmlFor="taskId" color="white">
+            <FormLabel htmlFor="taskId" color={colorMode === 'light' ? 'black' : 'white'}>
               Task_ID
             </FormLabel>
             <Input
               id="taskId"
-              onKeyDown={handleTaskIdKeyPress}
-              placeholder="Enter Task ID and press Enter"
+              // onKeyDown={handleTaskIdKeyPress}
+              ref={taskIdInputRef}
+              placeholder="Enter Task ID"
               size="lg"
               width="350px"
-              borderColor="white"
-              color="white"
-              _placeholder={{ color: 'white' }}
+              // borderColor={{ color: colorMode === 'light' ? 'black' : 'white' }}
+              // color={{ color: colorMode === 'light' ? 'black' : 'white' }}
+              // _placeholder={{ color: colorMode === 'light' ? 'black' : 'white' }}
+              variant="main"
               backgroundColor="transparent"
             />
+            <Button
+              onClick={handleTaskIdKeyPress}
+              size="lg"
+              colorScheme="blue"
+              width="200px"
+              m={2}
+            >
+              Set Task ID
+            </Button>
           </FormControl>
         </div>
 
@@ -187,6 +199,7 @@ const Page: React.FC = () => {
                   getSkeleton(rowsPerPage, 5)
                 ) : (
                   paginatedData?.items?.map((item, index) => (
+
                     <Tr key={index}>
                       <Td>{(currentPage - 1) * rowsPerPage + index + 1}</Td>
                       <Td>{item.column_name}</Td>
@@ -200,12 +213,17 @@ const Page: React.FC = () => {
                         </span>{' '}
                         / {totalCount}
                       </Td>
-                      <Td>
                         <FaEye
                           size={24}
                           style={{ cursor: 'pointer' }}
                           onClick={() => handleViewClick(item.column_name)}
                         />
+                        {item.null_count == 0 ? <span style={{ color: 'green.400' }}>Successful</span> : (
+                          <FaEye
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => handleViewClick(item.column_name)}
+                          />
+                        )}
                       </Td>
                       <Td>
                         {commentCount[item.column_name] !== undefined
@@ -215,7 +233,6 @@ const Page: React.FC = () => {
                     </Tr>
                   ))
                 )}
-              </Tbody>
 
               {paginatedData && (
                 <Tfoot>
@@ -266,7 +283,7 @@ const Page: React.FC = () => {
             />
           </div>
         )}
-      </div>
+      </div >
     </>
   );
 };
