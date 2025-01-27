@@ -18,15 +18,11 @@ import {
 } from '@chakra-ui/react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FaEye } from 'react-icons/fa';
 import NullRecords from './NullRecords';
 import { getSkeleton } from 'utils/skeleton';
-
-interface CommentData {
-  column_name: string;
-  comment_count: number;
-}
+import { fetchPaginatedData } from 'utils/api/report';
 
 interface PaginatedData {
   items: Array<{
@@ -52,29 +48,21 @@ const Page: React.FC = () => {
   const product_details = 'ddmapp_amazonproductdetailsnew_data_1028';
   const product_list = 'ddmapp_amazonproductlist_data_1028';
 
-  const tableName = product_list;
-
-  // Fetch Paginated Data using TanStack Query and Axios
-  const fetchPaginatedData = async (page: number) => {
-    const response = await axios.get(
-      `http://localhost:8000/${tableName}/task_id/${taskId}`,
-      {
-        params: { page_no: page, page_per: rowsPerPage },
-      },
-    );
-    console.log('Data: ', response.data);
-
-    setTotalCount(response.data.total_count);
-
-    return response.data;
-  };
+  const tableName = seller_table;
 
   const { data: paginatedData, isLoading: isPaginatedDataLoading } =
     useQuery<PaginatedData>({
       queryKey: ['paginatedData', currentPage, taskId],
-      queryFn: () => fetchPaginatedData(currentPage),
+      queryFn: () =>
+        fetchPaginatedData(tableName, taskId, currentPage, rowsPerPage),
       enabled: !!taskId,
     });
+
+  useEffect(() => {
+    if (paginatedData?.total_count !== undefined) {
+      setTotalCount(paginatedData.total_count);
+    }
+  }, [paginatedData]);
 
   // Fetch Comment Count
   const getCommentCount = async () => {
@@ -129,6 +117,10 @@ const Page: React.FC = () => {
   return (
     <>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ marginLeft: '2rem' }}>
+          <span style={{ fontSize: '1.5rem' }}>{tableName}</span>
+        </div>
+
         <div
           style={{
             display: 'flex',
@@ -165,32 +157,20 @@ const Page: React.FC = () => {
               Set Task ID
             </Button>
           </FormControl>
-
-          {/* <FormControl>
-            <FormLabel htmlFor="tableName" color="white">
-              Select Table
-            </FormLabel>
-            <Select
-              id="tableName"
-              value={tableName}
-              onChange={(e) => setTableName(e.target.value)}
-              width="400px"
-              size="lg"
-              borderColor="white"
-              color="white"
-              backgroundColor="transparent"
-            >
-              <option value={seller_table}>Seller Table</option>
-              <option value={product_details}>Product Details</option>
-              <option value={product_list}>Product List</option>
-            </Select>
-          </FormControl> */}
         </div>
 
-        {/* Table */}
+        {/* ****************************** Main Table ****************************** */}
         <div style={{ marginTop: '2rem' }}>
           <TableContainer>
-            <Table variant="simple" size="lg">
+            <Table
+              fontSize={18}
+              variant="simple"
+              size="lg"
+              sx={{
+                borderSpacing: '0rem',
+                borderCollapse: 'collapse',
+              }}
+            >
               <Thead>
                 <Tr>
                   <Th>Serial No.</Th>
@@ -200,10 +180,26 @@ const Page: React.FC = () => {
                   <Th>Total Comments</Th>
                 </Tr>
               </Thead>
+
               <Tbody>
-                {isPaginatedDataLoading
-                  ? getSkeleton(rowsPerPage, 5)
-                  : paginatedData?.items?.map((item, index) => (
+                {!taskId ? (
+                  <Tr>
+                    <Td
+                      colSpan={5}
+                      style={{
+                        fontSize: '2rem',
+                        textAlign: 'center',
+                        color: 'yellow',
+                      }}
+                    >
+                      Enter Task Id
+                    </Td>
+                  </Tr>
+                ) : isPaginatedDataLoading ? (
+                  getSkeleton(rowsPerPage, 5)
+                ) : (
+                  paginatedData?.items?.map((item, index) => (
+
                     <Tr key={index}>
                       <Td>{(currentPage - 1) * rowsPerPage + index + 1}</Td>
                       <Td>{item.column_name}</Td>
@@ -217,14 +213,17 @@ const Page: React.FC = () => {
                         </span>{' '}
                         / {totalCount}
                       </Td>
-                      <Td>
+                        <FaEye
+                          size={24}
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => handleViewClick(item.column_name)}
+                        />
                         {item.null_count == 0 ? <span style={{ color: 'green.400' }}>Successful</span> : (
                           <FaEye
                             style={{ cursor: 'pointer' }}
                             onClick={() => handleViewClick(item.column_name)}
                           />
                         )}
-
                       </Td>
                       <Td>
                         {commentCount[item.column_name] !== undefined
@@ -232,41 +231,49 @@ const Page: React.FC = () => {
                           : 'NAN'}
                       </Td>
                     </Tr>
-                  ))}
-              </Tbody>
+                  ))
+                )}
 
-              <Tfoot>
-                <Tr>
-                  <Th>Total: {paginatedData?.total_items}</Th>
-                </Tr>
-              </Tfoot>
+              {paginatedData && (
+                <Tfoot>
+                  <Tr>
+                    <Th>Total: {paginatedData?.total_items}</Th>
+                    <Th></Th>
+                    <Th>Total: {}</Th>
+                    <Th></Th>
+                    <Th>Total: {}</Th>
+                  </Tr>
+                </Tfoot>
+              )}
             </Table>
           </TableContainer>
         </div>
 
-        {/* Pagination */}
-        <div style={{ marginBottom: '4rem' }}>
-          <Box mt={4} display="flex" justifyContent="center">
-            <Button
-              onClick={() => handlePageChange(currentPage - 1)}
-              isDisabled={currentPage === 1}
-              mr={2}
-            >
-              Previous
-            </Button>
-            <Button
-              onClick={() => handlePageChange(currentPage + 1)}
-              isDisabled={currentPage === totalPages}
-            >
-              Next
-            </Button>
-          </Box>
-          <Box mt={2} textAlign="center">
-            Page {currentPage} of {totalPages}
-          </Box>
-        </div>
+        {/* ****************************** Pagination ****************************** */}
+        {taskId && (
+          <div style={{ marginBottom: '4rem' }}>
+            <Box mt={4} display="flex" justifyContent="center">
+              <Button
+                onClick={() => handlePageChange(currentPage - 1)}
+                isDisabled={currentPage === 1}
+                mr={2}
+              >
+                Previous
+              </Button>
+              <Button
+                onClick={() => handlePageChange(currentPage + 1)}
+                isDisabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </Box>
+            <Box mt={2} textAlign="center">
+              Page {currentPage} of {totalPages}
+            </Box>
+          </div>
+        )}
 
-        {/* Null Records Component */}
+        {/* ****************************** Null Records Component ****************************** */}
         {selectedColumn && (
           <div ref={nullRecordRef}>
             <NullRecords
