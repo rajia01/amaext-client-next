@@ -42,10 +42,9 @@ const Page: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [taskId, setTaskId] = useState<number>();
   const [totalCount, setTotalCount] = useState<number>(0);
-  // const [tableName, setTableName] = useState<string>('');
-
   const nullRecordRef = useRef<HTMLDivElement>(null);
 
+  // Table names
   const seller_table = 'ddmapp_amazonsellerdetails_data';
   const product_details = 'ddmapp_amazonproductdetailsnew_data_1028';
   const product_list = 'ddmapp_amazonproductlist_data_1028';
@@ -74,8 +73,6 @@ const Page: React.FC = () => {
       enabled: !!taskId,
     });
 
-  // console.log('Paginated Data:   ', paginatedData);
-
   // Fetch Comment Count
   const getCommentCount = async () => {
     const response = await axios.get(
@@ -86,9 +83,6 @@ const Page: React.FC = () => {
     const commentCounts = JSON.parse(
       response.data[0].total_comments_by_columns,
     );
-
-    // console.log('ResponseData: ', response.data);
-    // console.log('Comment Counts: ', commentCounts);
     return commentCounts;
   };
 
@@ -107,13 +101,6 @@ const Page: React.FC = () => {
       setCurrentPage(page);
     }
   };
-
-  // useEffect(() => {
-  //   if (taskId) {
-  //     // fetchPaginatedData(currentPage);
-  //     // getCommentCount();
-  //   }
-  // }, [currentPage, taskId]);
 
   const handleViewClick = (columnName: string) => {
     // Scroll to the NullRecords component
