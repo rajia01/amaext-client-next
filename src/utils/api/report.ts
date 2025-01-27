@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// Get columnwise record data
+// ================================= Get columnwise record data =================================
 export const getDataView = async (
   tableName: string,
   taskId: number,
@@ -12,6 +12,7 @@ export const getDataView = async (
     );
     console.log('DB Record: ', response.data);
     return response.data;
+    //
   } catch (error) {
     console.error('Error fetching data:', error);
     throw new Error(
@@ -20,7 +21,7 @@ export const getDataView = async (
   }
 };
 
-// Create comment and save in database
+// ================================= Create comment and save in database =================================
 export const postComment = async (
   tableName: string,
   taskId: number,
@@ -37,13 +38,14 @@ export const postComment = async (
     );
     alert('Comment added succesfully!');
     return;
+    //
   } catch (error) {
     console.error('Error saving comment: ', error);
     throw new Error('Error saving comment');
   }
 };
 
-// Get Comments columnwise to the ids
+// ================================= Get Comments columnwise to the ids =================================
 export const getColumnwiseComments = async (
   tableName: string,
   taskId: number,
@@ -64,6 +66,7 @@ export const getColumnwiseComments = async (
       }),
     );
     return idsAndComments;
+    //
   } catch (error) {
     console.error('Error fetching data:', error);
     throw new Error(
@@ -72,7 +75,7 @@ export const getColumnwiseComments = async (
   }
 };
 
-// Null Count columnwise
+// ====================================== Null Count columnwise ======================================
 export const fetchPaginatedData = async (
   tableName: string,
   taskId: number,
@@ -94,4 +97,43 @@ export const fetchPaginatedData = async (
       error instanceof Error ? error.message : 'Error fetching data',
     );
   }
+};
+
+// ================================= Fetch comment count =================================
+export const getCommentCount = async (tableName: string, taskId: number) => {
+  try {
+    const response = await axios.get(
+      `http://localhost:8000/${tableName}/${taskId}/total-comments`,
+    );
+    // Parse the stringified JSON object inside total_comments_by_columns
+    const commentCounts = JSON.parse(
+      response.data[0].total_comments_by_columns,
+    );
+    return commentCounts;
+    //
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    throw new Error(
+      error instanceof Error ? error.message : 'Error fetching data',
+    );
+  }
+};
+
+// ================================= Fetch Null Records =================================
+export const fetchNullRecords = async (
+  columnName: string,
+  page: number,
+  tableName: string,
+  taskId: number,
+  rowsPerPage: number,
+) => {
+  const response = await axios.get(
+    `http://localhost:8000/${tableName}/${taskId}/column/${columnName}`,
+    {
+      params: { page_no: page, page_per: rowsPerPage },
+    },
+  );
+  console.log('DATATTA: ', response.data);
+
+  return response.data;
 };

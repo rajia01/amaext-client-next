@@ -1,4 +1,5 @@
 'use client';
+
 import {
   Box,
   Button,
@@ -23,7 +24,11 @@ import axios from 'axios';
 import React, { useEffect, useRef, useState } from 'react';
 import { FaEye } from 'react-icons/fa';
 import { GrTooltip } from 'react-icons/gr';
-import { getColumnwiseComments, postComment } from 'utils/api/report';
+import {
+  fetchNullRecords,
+  getColumnwiseComments,
+  postComment,
+} from 'utils/api/report';
 import { getSkeleton } from 'utils/skeleton';
 import DBRecord from './DBRecord';
 
@@ -57,19 +62,6 @@ const NullRecords: React.FC<NullRecordsProps> = ({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const { colorMode } = useColorMode();
 
-  // Fetch Null Records using TanStack Query and Axios
-  const fetchNullRecords = async (columnName: string, page: number) => {
-    const response = await axios.get(
-      `http://localhost:8000/${tableName}/${taskId}/column/${columnName}`,
-      {
-        params: { page_no: page, page_per: rowsPerPage },
-      },
-    );
-    console.log('DATATTA: ', response.data);
-
-    return response.data;
-  };
-
   const {
     data: records,
     isLoading,
@@ -77,7 +69,8 @@ const NullRecords: React.FC<NullRecordsProps> = ({
     error,
   } = useQuery({
     queryKey: ['nullRecords', columnName, currentPage],
-    queryFn: () => fetchNullRecords(columnName, currentPage),
+    queryFn: () =>
+      fetchNullRecords(columnName, currentPage, tableName, taskId, rowsPerPage),
   });
 
   // **************************************************************************************
@@ -129,7 +122,6 @@ const NullRecords: React.FC<NullRecordsProps> = ({
 
   const handleCommentChange = (id: number, comment: string) => {
     setComment(() => ({
-      // ...prevComments,
       [id]: comment,
     }));
   };

@@ -17,14 +17,14 @@ import {
   useColorMode,
 } from '@chakra-ui/react';
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
 import { useEffect, useRef, useState } from 'react';
 import { FaEye } from 'react-icons/fa';
-import NullRecords from './NullRecords';
+import { fetchPaginatedData, getCommentCount } from 'utils/api/report';
 import { getSkeleton } from 'utils/skeleton';
-import { fetchPaginatedData } from 'utils/api/report';
+import NullRecords from './NullRecords';
 
 interface PaginatedData {
+  total_count: number;
   items: Array<{
     column_name: string;
     not_null_count: number;
@@ -43,12 +43,12 @@ const Page: React.FC = () => {
   const taskIdInputRef = useRef<HTMLInputElement>(null);
   const { colorMode } = useColorMode();
 
-  // Table names
+  // =================================== TableNames ===================================
   const seller_table = 'ddmapp_amazonsellerdetails_data_1028';
   const product_details = 'ddmapp_amazonproductdetailsnew_data_1028';
   const product_list = 'ddmapp_amazonproductlist_data_1028';
 
-  const tableName = seller_table;
+  const tableName: string = seller_table;
 
   const { data: paginatedData, isLoading: isPaginatedDataLoading } =
     useQuery<PaginatedData>({
@@ -58,34 +58,23 @@ const Page: React.FC = () => {
       enabled: !!taskId,
     });
 
+  const { data: commentCount, isLoading: isCommentCountLoading } = useQuery({
+    queryKey: ['commentCount'],
+    queryFn: () => getCommentCount(tableName, taskId),
+    enabled: !!taskId,
+  });
+
   useEffect(() => {
     if (paginatedData?.total_count !== undefined) {
       setTotalCount(paginatedData.total_count);
     }
   }, [paginatedData]);
 
-  // Fetch Comment Count
-  const getCommentCount = async () => {
-    const response = await axios.get(
-      `http://localhost:8000/${tableName}/${taskId}/total-comments`,
-    );
-
-    // Parse the stringified JSON object inside total_comments_by_columns
-    const commentCounts = JSON.parse(
-      response.data[0].total_comments_by_columns,
-    );
-    return commentCounts;
-  };
-
-  const { data: commentCount, isLoading: isCommentCountLoading } = useQuery({
-    queryKey: ['commentCount'],
-    queryFn: getCommentCount,
-    enabled: !!taskId,
-  });
-
   const totalPages = paginatedData
     ? Math.ceil(paginatedData.total_items / rowsPerPage)
     : 0;
+
+  // ================================= Handle Button logics =================================
 
   const handlePageChange = (page: number) => {
     if (page > 0 && page <= totalPages) {
@@ -114,11 +103,24 @@ const Page: React.FC = () => {
     }
   };
 
+  // ======================================== Return body ========================================
   return (
     <>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <div style={{ marginLeft: '2rem' }}>
-          <span style={{ fontSize: '1.5rem' }}>{tableName}</span>
+          <span style={{ fontSize: '1.8rem', borderBottom: '1px solid white' }}>
+            {(() => {
+              if (tableName === (seller_table as string)) {
+                return 'Amazon Seller Table';
+              } else if (tableName === (product_details as string)) {
+                return 'Amazon Product Details';
+              } else if (tableName === (product_list as string)) {
+                return 'Amazon Product List';
+              } else {
+                return 'Unknown Table';
+              }
+            })()}
+          </span>
         </div>
 
         <div
@@ -139,14 +141,10 @@ const Page: React.FC = () => {
             </FormLabel>
             <Input
               id="taskId"
-              // onKeyDown={handleTaskIdKeyPress}
               ref={taskIdInputRef}
               placeholder="Enter Task ID"
               size="lg"
               width="350px"
-              // borderColor={{ color: colorMode === 'light' ? 'black' : 'white' }}
-              // color={{ color: colorMode === 'light' ? 'black' : 'white' }}
-              // _placeholder={{ color: colorMode === 'light' ? 'black' : 'white' }}
               variant="main"
               backgroundColor="transparent"
             />
@@ -162,7 +160,7 @@ const Page: React.FC = () => {
           </FormControl>
         </div>
 
-        {/* ****************************** Main Table ****************************** */}
+        {/* ================================= Main Table ================================= */}
         <div style={{ marginTop: '2rem' }}>
           <TableContainer>
             <Table
@@ -217,15 +215,13 @@ const Page: React.FC = () => {
                       </Td>
                       <Td>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                          <FaEye
-                            size={24}
-                            style={{ cursor: 'pointer' }}
-                            onClick={() => handleViewClick(item.column_name)}
-                          />
                           {item.null_count === 0 ? (
-                            <span style={{ color: 'green' }}>Successful</span>
+                            <span style={{ color: 'lightgreen' }}>
+                              Successful
+                            </span>
                           ) : (
                             <FaEye
+                              size={24}
                               style={{ cursor: 'pointer' }}
                               onClick={() => handleViewClick(item.column_name)}
                             />
@@ -233,7 +229,8 @@ const Page: React.FC = () => {
                         </div>
                       </Td>
                       <Td>
-                        {commentCount[item.column_name] !== undefined
+                        {commentCount[item.column_name] !== undefined ||
+                        commentCount[item.column_name] !== 0
                           ? commentCount[item.column_name]
                           : 'NAN'}
                       </Td>
@@ -257,7 +254,7 @@ const Page: React.FC = () => {
           </TableContainer>
         </div>
 
-        {/* ****************************** Pagination ****************************** */}
+        {/* ================================== Pagination ================================== */}
         {taskId && (
           <div style={{ marginBottom: '4rem' }}>
             <Box mt={4} display="flex" justifyContent="center">
@@ -281,7 +278,7 @@ const Page: React.FC = () => {
           </div>
         )}
 
-        {/* ****************************** Null Records Component ****************************** */}
+        {/* ================================== Null Records Component ================================== */}
         {selectedColumn && (
           <div ref={nullRecordRef}>
             <NullRecords
