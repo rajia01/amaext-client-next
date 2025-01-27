@@ -12,6 +12,11 @@ import {
   Tr,
   Tooltip,
   Button,
+  PopoverContent,
+  Popover,
+  PopoverBody,
+  PopoverArrow,
+  PopoverTrigger,
 } from '@chakra-ui/react';
 import React, { useState, useRef, useEffect } from 'react';
 import { FaEye } from 'react-icons/fa';
@@ -234,38 +239,36 @@ const NullRecords: React.FC<NullRecordsProps> = ({
                                 eachComment.id === record.id,
                             ).length || 0}
                           </span>
-
-                          <Tooltip
-                            label={
-                              allComments?.filter(
-                                (eachComment: any) =>
-                                  eachComment.id === record.id,
-                              ).length > 0
-                                ? allComments
-                                    .filter(
-                                      (eachComment: any) =>
-                                        eachComment.id === record.id,
-                                    )
-                                    .map(
-                                      (eachComment: any, index: number) =>
-                                        `${index + 1}. ${eachComment.comment}`,
-                                    )
-                                    .join(', ')
-                                : 'No comments available'
-                            }
-                            placement="top"
-                            fontSize="1.2rem"
-                          >
-                            <button>
-                              <GrTooltip
-                                style={{
-                                  fontSize: '1.8rem',
-                                  cursor: 'pointer',
-                                  color: '#007bff',
+                          <Popover trigger="hover" placement="top">
+                            <PopoverTrigger>
+                              <button>
+                                <GrTooltip
+                                  style={{
+                                    fontSize: '1.8rem',
+                                    cursor: 'pointer',
+                                    color: '#007bff',
+                                  }}
+                                />
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent>
+                              <PopoverArrow />
+                              <PopoverBody
+                                dangerouslySetInnerHTML={{
+                                  __html: allComments?.filter(
+                                    (eachComment: any) => eachComment.id === record.id
+                                  ).length > 0
+                                    ? allComments
+                                        .filter((eachComment: any) => eachComment.id === record.id)
+                                        .map((eachComment: any, index: number) =>
+                                          `${index + 1}. ${eachComment.comment}`
+                                        )
+                                        .join('<br />') // Join with <br /> to create line breaks
+                                    : 'No comments available',
                                 }}
                               />
-                            </button>
-                          </Tooltip>
+                            </PopoverContent>
+                          </Popover>
 
                           <button
                             onClick={() =>
