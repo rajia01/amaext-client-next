@@ -12,6 +12,7 @@ import {
   Tr,
   Tooltip,
   Button,
+  useColorMode,
 } from '@chakra-ui/react';
 import React, { useState, useRef, useEffect } from 'react';
 import { FaEye } from 'react-icons/fa';
@@ -49,6 +50,8 @@ const NullRecords: React.FC<NullRecordsProps> = ({
   const dbViewRef = useRef<HTMLDivElement>(null);
   const [rowsPerPage] = useState(7);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const { colorMode } = useColorMode();
+
 
   // Fetch Null Records using TanStack Query and Axios
   const fetchNullRecords = async (columnName: string, page: number) => {
@@ -211,7 +214,7 @@ const NullRecords: React.FC<NullRecordsProps> = ({
                             }
                             placeholder="Type your comment"
                             style={{
-                              color: 'white',
+                              color: colorMode === 'light' ? 'black' : 'white',
                               padding: '0.5rem',
                               marginRight: '0.5rem',
                               width: '60%',
@@ -219,7 +222,8 @@ const NullRecords: React.FC<NullRecordsProps> = ({
                               border: '1px solid #ccc',
                               borderRadius: '4px',
                             }}
-                          />
+                            className={colorMode === 'light' ? 'light-placeholder' : 'dark-placeholder'} />
+
                           {/* Comment count */}
                           <span
                             style={{
@@ -242,15 +246,15 @@ const NullRecords: React.FC<NullRecordsProps> = ({
                                   eachComment.id === record.id,
                               ).length > 0
                                 ? allComments
-                                    .filter(
-                                      (eachComment: any) =>
-                                        eachComment.id === record.id,
-                                    )
-                                    .map(
-                                      (eachComment: any, index: number) =>
-                                        `${index + 1}. ${eachComment.comment}`,
-                                    )
-                                    .join(', ')
+                                  .filter(
+                                    (eachComment: any) =>
+                                      eachComment.id === record.id,
+                                  )
+                                  .map(
+                                    (eachComment: any, index: number) =>
+                                      `${index + 1}. ${eachComment.comment}`,
+                                  )
+                                  .join(', ')
                                 : 'No comments available'
                             }
                             placement="top"
