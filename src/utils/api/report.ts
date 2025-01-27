@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+// Get columnwise record data
 export const getDataView = async (
   tableName: string,
   taskId: number,
@@ -19,6 +20,7 @@ export const getDataView = async (
   }
 };
 
+// Create comment and save in database
 export const postComment = async (
   tableName: string,
   taskId: number,
@@ -41,6 +43,7 @@ export const postComment = async (
   }
 };
 
+// Get Comments columnwise to the ids
 export const getColumnwiseComments = async (
   tableName: string,
   taskId: number,
@@ -61,6 +64,30 @@ export const getColumnwiseComments = async (
       }),
     );
     return idsAndComments;
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    throw new Error(
+      error instanceof Error ? error.message : 'Error fetching data',
+    );
+  }
+};
+
+// Null Count columnwise
+export const fetchPaginatedData = async (
+  tableName: string,
+  taskId: number,
+  page: number,
+  rowsPerPage: number,
+) => {
+  try {
+    const response = await axios.get(
+      `http://localhost:8000/${tableName}/task_id/${taskId}`,
+      {
+        params: { page_no: page, page_per: rowsPerPage },
+      },
+    );
+    return response.data;
+    //
   } catch (error) {
     console.error('Error fetching data:', error);
     throw new Error(

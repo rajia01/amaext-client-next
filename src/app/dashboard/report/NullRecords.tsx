@@ -1,6 +1,7 @@
 'use client';
 import {
   Box,
+  Button,
   Flex,
   Link,
   Table,
@@ -9,19 +10,17 @@ import {
   Td,
   Th,
   Thead,
-  Tr,
   Tooltip,
-  Button,
+  Tr,
 } from '@chakra-ui/react';
-import React, { useState, useRef, useEffect } from 'react';
-import { FaEye } from 'react-icons/fa';
-import { GrTooltip } from 'react-icons/gr'; // Fixed GrTooltip import
-import { getSkeleton } from 'utils/skeleton';
-import { shortenUrl } from 'utils/urlShortner';
-import DBRecord from './DBRecord';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
+import React, { useEffect, useRef, useState } from 'react';
+import { FaEye } from 'react-icons/fa';
+import { GrTooltip } from 'react-icons/gr';
 import { getColumnwiseComments, postComment } from 'utils/api/report';
+import { getSkeleton } from 'utils/skeleton';
+import DBRecord from './DBRecord';
 
 interface NullRecordsProps {
   taskId: number;
@@ -72,11 +71,6 @@ const NullRecords: React.FC<NullRecordsProps> = ({
     queryKey: ['nullRecords', columnName, currentPage],
     queryFn: () => fetchNullRecords(columnName, currentPage),
   });
-
-  // const { data: comments} = useQuery({
-  //   queryKey: ['comments', tableName, taskId, columnName, srId],
-  //   queryFn: () => getColumnwiseComments(tableName, taskId, columnName, srId)
-  // });
 
   // **************************************************************************************
 
@@ -139,8 +133,13 @@ const NullRecords: React.FC<NullRecordsProps> = ({
         style={{ marginTop: '1rem', padding: '1rem', border: '1px solid #ccc' }}
       >
         <div>
-          <div style={{ fontSize: '1.6rem' }}>Column: "{columnName}"</div>
-          <div style={{ fontSize: '1.2rem' }}>Task_ID: {taskId}</div>
+          <div style={{ fontSize: '1.6rem' }}>
+            {tableName}{' '}
+            <span style={{ color: 'yellow', fontSize: '2rem' }}>/</span>{' '}
+            {taskId}{' '}
+            <span style={{ color: 'yellow', fontSize: '2rem' }}>/</span>{' '}
+            {columnName}
+          </div>
         </div>
 
         <div style={{ marginTop: '1.5rem' }}>
@@ -153,7 +152,7 @@ const NullRecords: React.FC<NullRecordsProps> = ({
                   <Th>Created Date</Th>
                   <Th>Modified Date</Th>
                   <Th>Date Difference</Th>
-                  <Th>Comment</Th> {/* Added column for comment */}
+                  <Th>Comment</Th>
                 </Tr>
               </Thead>
               <Tbody>
