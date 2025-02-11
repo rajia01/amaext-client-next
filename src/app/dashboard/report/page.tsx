@@ -230,7 +230,7 @@ const Page: React.FC = () => {
                       </Td>
                       <Td>
                         {commentCount[item.column_name] !== undefined ||
-                        commentCount[item.column_name] !== 0
+                          commentCount[item.column_name] !== 0
                           ? commentCount[item.column_name]
                           : 'NAN'}
                       </Td>
@@ -244,9 +244,9 @@ const Page: React.FC = () => {
                   <Tr>
                     <Th>Total: {paginatedData?.total_items}</Th>
                     <Th></Th>
-                    <Th>Total: {}</Th>
+                    <Th>Total: { }</Th>
                     <Th></Th>
-                    <Th>Total: {}</Th>
+                    <Th>Total: { }</Th>
                   </Tr>
                 </Tfoot>
               )}
