@@ -3,40 +3,41 @@
 import {
   Box,
   Button,
-  FormControl,
-  FormLabel,
-  Input,
-  useColorMode,
   Card,
   CardHeader,
+  FormControl,
+  FormLabel,
   Heading,
-  Tooltip,
+  Input,
+  Popover,
+  PopoverArrow,
+  PopoverBody,
+  PopoverContent,
+  PopoverTrigger,
   SimpleGrid,
+  Skeleton,
+  SkeletonText,
   Table,
   TableContainer,
   Tbody,
-  Thead,
   Td,
-  Tr,
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-  PopoverArrow,
-  PopoverBody,
+  Text,
   Th,
-  SkeletonText,
-  Skeleton
+  Thead,
+  Tooltip,
+  Tr,
+  useColorMode,
 } from '@chakra-ui/react';
-import { useState, useRef } from 'react';
-import { FaInfoCircle } from 'react-icons/fa';
 import { useQuery } from '@tanstack/react-query';
+import { useRef, useState } from 'react';
+import { FaInfoCircle } from 'react-icons/fa';
+import { GrTooltip } from 'react-icons/gr';
 import {
   fetchBackendData,
   getColumnwiseComments,
   getCommentCount,
 } from 'utils/api/report';
-import { GrTooltip } from 'react-icons/gr';
-import ColumnCount from './ColumnCount';
+import ShowBucketColumns from './ShowBucketColumns';
 
 // Define the type for a column entry
 type Column = {
@@ -99,13 +100,48 @@ function showTable(columns: { column_name: string; null_count: number }[]) {
   );
 }
 
-// ============================= Page Component =============================
+// ========================= Add the small card component at the top right =========================
+const AccuracyInfoCard: React.FC = () => {
+  const { colorMode } = useColorMode();
+  return (
+    <Card
+      position="absolute"
+      top="12%"
+      right="4.5%"
+      w="-moz-fit-content"
+      p={4}
+      borderRadius="lg"
+      boxShadow="lg"
+      bg={colorMode === 'light' ? 'blue.50' : 'gray.700'} // Different background
+      border="2px solid"
+      borderColor={colorMode === 'light' ? 'blue.300' : 'blue.500'} // Highlight border
+    >
+      <Heading size="md" color="blue.600" textAlign="left" marginY="1">
+        Accuracy Values
+      </Heading>
+      <Box>
+        <Text
+          fontSize="sm"
+          color={colorMode === 'light' ? 'gray.700' : 'gray.300'}
+        >
+          <strong>Full:</strong> All columns contain complete data.
+          <br />
+          <strong>Empty:</strong> Whole column is Empty.
+          <br />
+          <strong>NaN:</strong> No Correlation between the columns data.
+        </Text>
+      </Box>
+    </Card>
+  );
+};
+
+// ============================================= Page Component =============================================
 const Page: React.FC = () => {
   const { colorMode } = useColorMode();
   const [taskId, setTaskId] = useState<number | null>(null);
   const taskIdInputRef = useRef<HTMLInputElement>(null);
   const columnCountRef = useRef<HTMLDivElement>(null);
-  const [showColumnCount, setShowColumnCount] = useState(false);
+  const [showBucketColumns, setShowBucketColumns] = useState(false);
   const [selectedColumns, setSelectedColumns] = useState<
     { column_name: string; null_count: number }[] | null
   >(null);
@@ -159,7 +195,7 @@ const Page: React.FC = () => {
     const newTaskId = Number(inputValue);
     if (!isNaN(newTaskId)) {
       setTaskId(newTaskId);
-      setShowColumnCount(false);
+      setShowBucketColumns(false);
     }
   };
 
@@ -169,7 +205,7 @@ const Page: React.FC = () => {
   ) => {
     setSelectedColumns(columns);
     setSelectedBucket(bucketName);
-    setShowColumnCount(true);
+    setShowBucketColumns(true);
     setTimeout(() => {
       columnCountRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 200);
@@ -177,7 +213,14 @@ const Page: React.FC = () => {
 
   const renderSkeletons = () => {
     return Array.from({ length: 6 }).map((_, index) => (
-      <Card key={index} w="300px" h="auto" p={5} borderRadius="lg" boxShadow="lg">
+      <Card
+        key={index}
+        w="300px"
+        h="auto"
+        p={5}
+        borderRadius="lg"
+        boxShadow="lg"
+      >
         <Skeleton height="40px" mb={4} />
         <SkeletonText mt="4" noOfLines={4} spacing="4" />
       </Card>
@@ -186,7 +229,10 @@ const Page: React.FC = () => {
 
   return (
     <Box p={6}>
-      {/* Table Name Display */}
+      {/* Accuracy Info Card */}
+      <AccuracyInfoCard />
+
+      {/* =================================== Table-Name =================================== */}
       <Box mb={6}>
         <Heading
           size="lg"
@@ -211,7 +257,8 @@ const Page: React.FC = () => {
         </Heading>
       </Box>
 
-      {/* Task ID Input */}
+      {/* =================================== Task ID Input =================================== */}
+
       <Box mb={8}>
         <FormControl>
           <FormLabel
@@ -244,10 +291,11 @@ const Page: React.FC = () => {
         </FormControl>
       </Box>
 
-      {/* Cluster Cards */}
+      {/* =================================== Cluster Cards =================================== */}
+
       {taskId ? (
         isLoading ? (
-          <SimpleGrid minChildWidth="300px" spacing={6} justifyContent="center">
+          <SimpleGrid minChildWidth="300px" spacing={5} justifyContent="center">
             {renderSkeletons()}
           </SimpleGrid>
         ) : error ? (
@@ -261,7 +309,7 @@ const Page: React.FC = () => {
             Error fetching data
           </Box>
         ) : (
-          <SimpleGrid minChildWidth="300px" spacing={6} justifyContent="center">
+          <SimpleGrid minChildWidth="300px" spacing={5} justifyContent="center">
             {data?.buckets &&
               Object.entries(data.buckets).map(
                 ([
@@ -270,9 +318,9 @@ const Page: React.FC = () => {
                 ]) => (
                   <Card
                     key={bucketName}
-                    w="300px"
+                    w="340px"
                     h="auto"
-                    p={5}
+                    p={4}
                     borderRadius="lg"
                     boxShadow="lg"
                     bg={colorMode === 'light' ? 'white' : 'gray.800'}
@@ -330,11 +378,7 @@ const Page: React.FC = () => {
                             <Tr>
                               <Td fontWeight="bold">Comments</Td>
                               <Td textAlign="right">
-                                <Box
-                                  display="flex"
-                                  alignItems="center"
-                                  gap="6px"
-                                >
+                                <Box display="flex" gap="10px">
                                   {/* Comment Count */}
                                   <Box
                                     display="inline-flex"
@@ -360,7 +404,7 @@ const Page: React.FC = () => {
                                       <Box as="button">
                                         <GrTooltip
                                           style={{
-                                            fontSize: '1.2rem',
+                                            fontSize: '1.5rem',
                                             cursor: 'pointer',
                                             color: '#007bff',
                                           }}
@@ -432,10 +476,11 @@ const Page: React.FC = () => {
         </Box>
       )}
 
-      {/* Display ColumnCount if Task ID is set */}
-      {showColumnCount && taskId && selectedColumns && (
+      {/* ======================== Display ShowBucketColumns Component if Task ID is set ======================== */}
+
+      {showBucketColumns && taskId && selectedColumns && (
         <Box ref={columnCountRef} mt={10}>
-          <ColumnCount
+          <ShowBucketColumns
             taskId={taskId}
             tableName={tableName}
             selectedColumns={selectedColumns}
