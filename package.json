@@ -44,9 +44,9 @@
     "web-vitals": "^1.1.2"
   },
   "scripts": {
-    "dev": "next dev -H 192.168.1.160 -p 3000",
+    "dev": "next dev",
     "build": "next build",
-    "start": "next start 192.168.1.160 -p 3000",
+    "start": "next start",
     "lint": "next lint",
     "predeploy": "yarn run build",
     "deploy": "gh-pages -d build"

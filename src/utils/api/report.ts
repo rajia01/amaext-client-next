@@ -1,5 +1,7 @@
 import axios from 'axios';
 
+const url = 'http://127.0.0.1:8000';
+
 // ================================= Get columnwise record data =================================
 export const getDataView = async (
   tableName: string,
@@ -7,9 +9,7 @@ export const getDataView = async (
   id: string,
 ) => {
   try {
-    const response = await axios.get(
-      `http://192.168.1.160:8000/${tableName}/${taskId}/sr/${id}`,
-    );
+    const response = await axios.get(`${url}/${tableName}/${taskId}/sr/${id}`);
     console.log('DB Record: ', response.data);
     return response.data;
     //
@@ -41,7 +41,7 @@ export const addComment = async (
 
   try {
     const response = await axios.post(
-      `http://192.168.1.160:8000/${tableName}/${taskId}/comment/?${params.toString()}`, // Attach params here
+      `${url}/${tableName}/${taskId}/comment/?${params.toString()}`, // Attach params here
       payload,
       {
         headers: {
@@ -66,7 +66,7 @@ export const getColumnwiseComments = async (
 ) => {
   try {
     const response = await axios.get(
-      `http://192.168.1.160:8000/${tableName}/${taskId}/get-comment/`,
+      `${url}/${tableName}/${taskId}/get-comment/`,
       {
         params: {
           bucket_name: bucketName,
@@ -95,12 +95,9 @@ export const fetchPaginatedData = async (
       `Fetching paginated data for ${tableName}, Task ID: ${taskId}, Page: ${page}, Bucket: ${selectedBucket}`,
     );
 
-    const response = await axios.get(
-      `http://192.168.1.160:8000/${tableName}/task_id/${taskId}`,
-      {
-        params: { page_no: page, page_per: rowsPerPage },
-      },
-    );
+    const response = await axios.get(`${url}/${tableName}/task_id/${taskId}`, {
+      params: { page_no: page, page_per: rowsPerPage },
+    });
 
     const data = response.data;
 
@@ -129,7 +126,7 @@ export const getCommentCount = async (
 ) => {
   try {
     const response = await axios.get(
-      `http://192.168.1.160:8000/${tableName}/${taskId}/total-comments`,
+      `${url}/${tableName}/${taskId}/total-comments`,
       {
         params: {
           bucket_name: bucketName,
@@ -137,7 +134,8 @@ export const getCommentCount = async (
         },
       },
     );
-    return response.data[0]?.total_comment_count || 0;
+
+    return response.data?.total_comment_count || 0;
   } catch (error) {
     console.error(`Error fetching comments for ${bucketName}:`, error);
     return 0;
@@ -153,27 +151,24 @@ export const fetchNullRecords = async (
   page: number,
   rowsPerPage: number,
 ) => {
-  const response = await axios.get(
-    `http://192.168.1.160:8000/${tableName}/${taskId}/columns`,
-    {
-      params: {
-        columns: columnName, // Ensure columns are properly formatted
-        page_no: page,
-        page_per: rowsPerPage,
-      },
-      paramsSerializer: (params) => {
-        return Object.keys(params)
-          .map((key) =>
-            Array.isArray(params[key])
-              ? params[key]
-                  .map((val: string) => `${key}=${encodeURIComponent(val)}`)
-                  .join('&')
-              : `${key}=${encodeURIComponent(params[key])}`,
-          )
-          .join('&');
-      },
+  const response = await axios.get(`${url}/${tableName}/${taskId}/columns`, {
+    params: {
+      columns: columnName, // Ensure columns are properly formatted
+      page_no: page,
+      page_per: rowsPerPage,
     },
-  );
+    paramsSerializer: (params) => {
+      return Object.keys(params)
+        .map((key) =>
+          Array.isArray(params[key])
+            ? params[key]
+                .map((val: string) => `${key}=${encodeURIComponent(val)}`)
+                .join('&')
+            : `${key}=${encodeURIComponent(params[key])}`,
+        )
+        .join('&');
+    },
+  });
 
   console.log(response.data.items);
 
@@ -187,9 +182,7 @@ export const fetchBackendData = async (tableName: string, taskId: number) => {
   if (!tableName || !taskId) return null; // Ensure table name and task ID are provided
 
   try {
-    const { data } = await axios.get(
-      `http://192.168.1.160:8000/${tableName}/task_id/${taskId}/`,
-    );
+    const { data } = await axios.get(`${url}/${tableName}/task_id/${taskId}/`);
     return data;
   } catch (error) {
     console.error('Error fetching backend data:', error);

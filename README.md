@@ -1,13 +1,13 @@
-# [Extraction Report Tool](https://horizon-ui.com/horizon-ui-chakra-nextjs)
+# [Extraction Report Tool](https://github.com/rajia01/amaext-client-next)
 
-![version](https://img.shields.io/badge/version-2.2.1-blue.svg)
+![version](https://img.shields.io/badge/version-3.0-blue.svg)
 ![license](https://img.shields.io/badge/license-MIT-blue.svg)
-[![GitHub issues open](https://img.shields.io/github/issues/horizon-ui/horizon-ui-chakra-nextjs.svg?maxAge=2592000)](https://github.com/horizon-ui/horizon-ui-chakra-nextjs/issues?q=is%3Aopen+is%3Aissue)
+[![GitHub issues open](https://img.shields.io/github/issues/horizon-ui/horizon-ui-chakra-nextjs.svg?maxAge=2592000)](https://github.com/rajia01/amaext-client-next/issues)
 
 <!-- <p>&nbsp;</p> -->
 
 <!-- [<img alt="Extraction Tool" src="" /> ](https://github.com/horizon-ui/horizon-ui-chakra-nextjs) -->
-
+<!--
 <p>&nbsp;</p>
 
 ### Introduction
@@ -103,4 +103,4 @@ new people that already use Horizon UI!
 
 ⭐️ [Copyright 2022 Simmmple ](https://www.simmmple.com/?ref=readme-horizon-nextjs)
 
-📄 [Horizon UI License](https://www.simmmple.com/licenses?ref=readme-horizon-nextjs)
+📄 [Horizon UI License](https://www.simmmple.com/licenses?ref=readme-horizon-nextjs) -->
