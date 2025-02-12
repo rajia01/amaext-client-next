@@ -176,164 +176,86 @@ const ColumnCount: React.FC<ColumnCountProps> = ({
             View All Null Records in Bucket
           </Button>
         </Box>
+                <TableContainer>
+                    <Table fontSize={18} variant="simple" size="lg">
+                        <Thead>
+                            <Tr>
+                                <Th>Serial No.</Th>
+                                <Th>Column Name</Th>
+                                <Th>Null Count</Th>
+                                <Th>View Null Records</Th>
+                                <Th>Comments</Th>
+                            </Tr>
+                        </Thead>
+                        <Tbody>
+                            {selectedColumns.map((item, index) => (
+                                <Tr key={index}>
+                                    <Td>{index + 1}</Td>
+                                    <Td>{item.column_name}</Td>
+                                    <Td>
+                                        <span style={{ color: item.null_count > 0 ? 'red' : 'inherit' }}>
+                                            {item.null_count}
+                                        </span>
+                                    </Td>
+                                    <Td>
+                                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                                            {item.null_count === 0 ? (
+                                                <span style={{ color: 'lightgreen' }}>Successful</span>
+                                            ) : (
+                                                <FaEye size={24} style={{ cursor: 'pointer' }} onClick={() => handleViewClick(item.column_name)} />
+                                            )}
+                                        </div>
+                                    </Td>
+                                    <Td textAlign="right">
+                                        <Box display="flex" alignItems="center" gap="6px">
+                                            <Box px="0.4rem" py="0.1rem" border="1px solid #ccc" borderRadius="4px" fontSize="0.9rem" fontWeight="bold" backgroundColor="gray.100" color="black" minWidth="24px" textAlign="center">
+                                                {columnCommentCounts?.[item.column_name] || 0}
+                                            </Box>
+                                            <Popover trigger="hover" placement="top">
+                                                <PopoverTrigger>
+                                                    <Box as="button">
+                                                        <GrTooltip style={{ fontSize: "1.2rem", cursor: "pointer", color: "#007bff" }} />
+                                                    </Box>
+                                                </PopoverTrigger>
+                                                <PopoverContent bg="gray.100" boxShadow="lg" borderRadius="md" p={3}>
+                                                    <PopoverArrow />
+                                                    <PopoverBody textAlign='left'>
+                                                        {columnComments?.[item.column_name]?.length > 0 ? (
+                                                            columnComments[item.column_name].map((comment, i) => (
+                                                                <Box key={i} fontSize="sm" color="black">
+                                                                    <strong>{i + 1}.</strong> {comment.text}
+                                                                </Box>
+                                                            ))
+                                                        ) : (
+                                                            <Box textAlign="center" fontSize="sm" fontWeight="bold" color="gray.600">
+                                                                No comments available
+                                                            </Box>
+                                                        )}
+                                                    </PopoverBody>
+                                                </PopoverContent>
+                                            </Popover>
+                                        </Box>
+                                    </Td>
+                                </Tr>
+                            ))}
+                        </Tbody>
+                    </Table>
+                </TableContainer>
 
-        <TableContainer>
-          <Table fontSize={18} variant="simple" size="lg">
-            <Thead>
-              <Tr>
-                <Th>Serial No.</Th>
-                <Th>Column Name</Th>
-                <Th>Null Count</Th>
-                <Th>View Null Records</Th>
-                <Th>Comments</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {!taskId ? (
-                <Tr>
-                  <Td
-                    colSpan={5}
-                    style={{
-                      fontSize: '2rem',
-                      textAlign: 'center',
-                      color: 'yellow',
-                    }}
-                  >
-                    Enter Task Id
-                  </Td>
-                </Tr>
-              ) : isPaginatedDataLoading ? (
-                getSkeleton(rowsPerPage, 5)
-              ) : (
-                paginatedData?.items
-                  ?.filter((item) =>
-                    selectedColumns.some(
-                      (col) => col.column_name === item.column_name,
-                    ),
-                  )
-                  .map((item, index) => (
-                    <Tr key={index}>
-                      <Td>{(currentPage - 1) * rowsPerPage + index + 1}</Td>
-                      <Td>{item.column_name}</Td>
-                      <Td>
-                        <span
-                          style={{
-                            color: item.null_count > 0 ? 'red' : 'inherit',
-                          }}
-                        >
-                          {item.null_count}
-                        </span>
-                      </Td>
-                      <Td>
-                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                          {item.null_count === 0 ? (
-                            <span style={{ color: 'lightgreen' }}>
-                              Successful
-                            </span>
-                          ) : (
-                            <FaEye
-                              size={24}
-                              style={{ cursor: 'pointer' }}
-                              onClick={() => handleViewClick(item.column_name)}
-                            />
-                          )}
-                        </div>
-                      </Td>
-                      <Td textAlign="right">
-                        <Box display="flex" alignItems="center" gap="6px">
-                          {/* Comment Count */}
-                          <Box
-                            display="inline-flex"
-                            alignItems="center"
-                            justifyContent="center"
-                            px="0.4rem"
-                            py="0.1rem"
-                            border="1px solid #ccc"
-                            borderRadius="4px"
-                            fontSize="0.9rem"
-                            fontWeight="bold"
-                            backgroundColor="gray.100"
-                            color="black"
-                            minWidth="24px"
-                            textAlign="center"
-                          >
-                            {columnCommentCounts?.[item.column_name] || 0}
-                          </Box>
-
-                          {/* Comment Popover */}
-                          <Popover trigger="hover" placement="top">
-                            <PopoverTrigger>
-                              <Box as="button">
-                                <GrTooltip
-                                  style={{
-                                    fontSize: '1.2rem',
-                                    cursor: 'pointer',
-                                    color: '#007bff',
-                                  }}
-                                />
-                              </Box>
-                            </PopoverTrigger>
-                            <PopoverContent
-                              bg="gray.100"
-                              boxShadow="lg"
-                              borderRadius="md"
-                              p={3}
-                            >
-                              <PopoverArrow />
-                              <PopoverBody textAlign="left">
-                                {columnComments?.[item.column_name]?.length >
-                                0 ? (
-                                  columnComments[item.column_name].map(
-                                    (comment, i) => (
-                                      <Box key={i} fontSize="sm" color="black">
-                                        <strong>{i + 1}.</strong> {comment.text}{' '}
-                                        {/* 🔹 Correctly displaying comment text */}
-                                      </Box>
-                                    ),
-                                  )
-                                ) : (
-                                  <Box
-                                    textAlign="center"
-                                    fontSize="sm"
-                                    fontWeight="bold"
-                                    color="gray.600"
-                                  >
-                                    No comments available
-                                  </Box>
-                                )}
-                              </PopoverBody>
-                            </PopoverContent>
-                          </Popover>
-                        </Box>
-                      </Td>
-                    </Tr>
-                  ))
-              )}
-            </Tbody>
-          </Table>
-        </TableContainer>
-
-        {taskId && (
-          <Box mt={4} display="flex" justifyContent="center">
-            <Button
-              onClick={() => handlePageChange(currentPage - 1)}
-              isDisabled={currentPage === 1}
-              mr={2}
-            >
-              Previous
-            </Button>
-            <Button
-              onClick={() => handlePageChange(currentPage + 1)}
-              isDisabled={currentPage === totalPages}
-            >
-              Next
-            </Button>
-          </Box>
-        )}
-        <Box mt={2} textAlign="center">
-          Page {currentPage} of {totalPages}
-        </Box>
-      </div>
+                {/* {taskId && (
+                    <Box mt={4} display="flex" justifyContent="center">
+                        <Button onClick={() => handlePageChange(currentPage - 1)} isDisabled={currentPage === 1} mr={2}>
+                            Previous
+                        </Button>
+                        <Button onClick={() => handlePageChange(currentPage + 1)} isDisabled={currentPage === totalPages}>
+                            Next
+                        </Button>
+                    </Box>
+                )} */}
+                {/* <Box mt={2} textAlign="center">
+                    Page {currentPage} of {totalPages}
+                </Box> */}
+            </div>
 
       {/* NullRecords component (passing all selected columns) */}
       {selectedColumnsForNullRecords && (

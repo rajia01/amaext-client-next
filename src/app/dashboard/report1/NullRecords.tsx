@@ -104,6 +104,13 @@ const NullRecords: React.FC<NullRecordsProps> = ({
 
     useEffect(() => { }, [currentPage, taskId]);
 
+    const getCommentPlaceholder = () => {
+        return columnName.length === 1
+            ? `Enter the comment for ${columnName[0]}`
+            : `Enter the comment for ${bucketName}`;
+    };
+
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div
@@ -130,7 +137,7 @@ const NullRecords: React.FC<NullRecordsProps> = ({
                                 type="text"
                                 value={comment}
                                 onChange={(e) => setComment(e.target.value)}
-                                placeholder="Type your comment"
+                                placeholder={getCommentPlaceholder()}
                                 style={{
                                     color: colorMode === 'light' ? 'black' : 'white',
                                     padding: '0.5rem',

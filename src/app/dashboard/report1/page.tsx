@@ -24,6 +24,8 @@ import {
   PopoverArrow,
   PopoverBody,
   Th,
+  SkeletonText,
+  Skeleton
 } from '@chakra-ui/react';
 import { useState, useRef } from 'react';
 import { FaInfoCircle } from 'react-icons/fa';
@@ -173,6 +175,15 @@ const Page: React.FC = () => {
     }, 200);
   };
 
+  const renderSkeletons = () => {
+    return Array.from({ length: 6 }).map((_, index) => (
+      <Card key={index} w="300px" h="auto" p={5} borderRadius="lg" boxShadow="lg">
+        <Skeleton height="40px" mb={4} />
+        <SkeletonText mt="4" noOfLines={4} spacing="4" />
+      </Card>
+    ));
+  };
+
   return (
     <Box p={6}>
       {/* Table Name Display */}
@@ -236,15 +247,9 @@ const Page: React.FC = () => {
       {/* Cluster Cards */}
       {taskId ? (
         isLoading ? (
-          <Box
-            textAlign="center"
-            fontSize="lg"
-            fontWeight="bold"
-            color="gray.500"
-            mt={6}
-          >
-            Loading data...
-          </Box>
+          <SimpleGrid minChildWidth="300px" spacing={6} justifyContent="center">
+            {renderSkeletons()}
+          </SimpleGrid>
         ) : error ? (
           <Box
             textAlign="center"
