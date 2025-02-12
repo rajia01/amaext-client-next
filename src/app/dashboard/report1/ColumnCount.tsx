@@ -3,6 +3,11 @@
 import {
     Box,
     Button,
+    Popover,
+    PopoverArrow,
+    PopoverBody,
+    PopoverContent,
+    PopoverTrigger,
     Table,
     TableContainer,
     Tbody,
@@ -15,9 +20,10 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { FaEye } from 'react-icons/fa';
-import { fetchPaginatedData, getCommentCount } from 'utils/api/report';
+import { fetchPaginatedData, getCommentCount, getColumnwiseComments } from 'utils/api/report';
 import { getSkeleton } from 'utils/skeleton';
 import NullRecords from './NullRecords';
+import { GrTooltip } from 'react-icons/gr';
 
 interface PaginatedData {
     total_count: number;
@@ -40,6 +46,7 @@ const ColumnCount: React.FC<ColumnCountProps> = ({ taskId, tableName, selectedCo
     const nullRecordRef = useRef<HTMLDivElement>(null);
     const { colorMode } = useColorMode();
 
+
     // Fetch Paginated Data
     const { data: paginatedData, isLoading: isPaginatedDataLoading } = useQuery<PaginatedData>({
         queryKey: ['paginatedData', currentPage, taskId, tableName, selectedBucket],
@@ -47,11 +54,35 @@ const ColumnCount: React.FC<ColumnCountProps> = ({ taskId, tableName, selectedCo
         enabled: !!taskId && !!tableName && !!selectedBucket,
     });
 
-    // Fetch Comment Count
-    const { data: commentCount } = useQuery({
-        queryKey: ['commentCount', taskId, tableName],
-        queryFn: () => getCommentCount(tableName, taskId),
-        enabled: !!taskId && !!tableName,
+    // Fetch column-wise comment counts
+    const { data: columnCommentCounts } = useQuery({
+        queryKey: ['columnCommentCounts', taskId, tableName, selectedBucket],
+        queryFn: async () => {
+            if (!taskId || !tableName || !selectedBucket) return {};
+            const counts: Record<string, number> = {};
+            for (const column of selectedColumns) {
+                const count = await getCommentCount(tableName, taskId, selectedBucket, column.column_name);
+                counts[column.column_name] = count;
+            }
+            return counts;
+        },
+        enabled: !!taskId && !!tableName && !!selectedBucket,
+    });
+
+
+    // Fetch column-wise comments
+    const { data: columnComments } = useQuery({
+        queryKey: ['columnComments', taskId, tableName, selectedBucket],
+        queryFn: async () => {
+            if (!taskId || !tableName || !selectedBucket) return {};
+            const comments: Record<string, any[]> = {};
+            for (const column of selectedColumns) {
+                const columnData = await getColumnwiseComments(tableName, taskId, selectedBucket, column.column_name);
+                comments[column.column_name] = columnData[0]?.comment_column || [];  // 🔹 Corrected data structure access
+            }
+            return comments;
+        },
+        enabled: !!taskId && !!tableName && !!selectedBucket,
     });
 
     useEffect(() => {
@@ -59,11 +90,6 @@ const ColumnCount: React.FC<ColumnCountProps> = ({ taskId, tableName, selectedCo
             setTotalCount(paginatedData.total_count);
         }
     }, [paginatedData]);
-
-    useEffect(() => {
-        console.log("Paginated Data:", paginatedData);
-        console.log("Comment Count:", commentCount);
-    }, [paginatedData, commentCount]);
 
     const totalPages = paginatedData ? Math.ceil(paginatedData.total_items / rowsPerPage) : 0;
 
@@ -97,12 +123,12 @@ const ColumnCount: React.FC<ColumnCountProps> = ({ taskId, tableName, selectedCo
         <div style={{ display: 'flex', flexDirection: 'column' }}>
 
 
-            <div style={{ marginTop: '6rem', padding: '1rem', border: '1px solid #ccc' }}>
+            <div style={{ padding: '1rem', border: '1px solid #ccc' }}>
                 <Box
                     display="flex"
                     justifyContent="space-between"
                     alignItems="center"
-                    mt={6}
+                    mt={1}
                     p={4}
                 >
                     {/* Breadcrumb Section */}
@@ -128,7 +154,7 @@ const ColumnCount: React.FC<ColumnCountProps> = ({ taskId, tableName, selectedCo
                                 <Th>Column Name</Th>
                                 <Th>Null Count</Th>
                                 <Th>View Null Records</Th>
-                                <Th>Total Comments</Th>
+                                <Th>Comments</Th>
                             </Tr>
                         </Thead>
                         <Tbody>
@@ -161,7 +187,53 @@ const ColumnCount: React.FC<ColumnCountProps> = ({ taskId, tableName, selectedCo
                                                     )}
                                                 </div>
                                             </Td>
-                                            <Td>{commentCount?.[item.column_name] ?? 'NAN'}</Td>
+                                            <Td textAlign="right">
+                                                <Box display="flex" alignItems="center" gap="6px">
+                                                    {/* Comment Count */}
+                                                    <Box
+                                                        display="inline-flex"
+                                                        alignItems="center"
+                                                        justifyContent="center"
+                                                        px="0.4rem"
+                                                        py="0.1rem"
+                                                        border="1px solid #ccc"
+                                                        borderRadius="4px"
+                                                        fontSize="0.9rem"
+                                                        fontWeight="bold"
+                                                        backgroundColor="gray.100"
+                                                        color="black"
+                                                        minWidth="24px"
+                                                        textAlign="center"
+                                                    >
+                                                        {columnCommentCounts?.[item.column_name] || 0}
+                                                    </Box>
+
+                                                    {/* Comment Popover */}
+                                                    <Popover trigger="hover" placement="top">
+                                                        <PopoverTrigger>
+                                                            <Box as="button">
+                                                                <GrTooltip style={{ fontSize: "1.2rem", cursor: "pointer", color: "#007bff" }} />
+                                                            </Box>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent bg="gray.100" boxShadow="lg" borderRadius="md" p={3}>
+                                                            <PopoverArrow />
+                                                            <PopoverBody textAlign='left'>
+                                                                {columnComments?.[item.column_name]?.length > 0 ? (
+                                                                    columnComments[item.column_name].map((comment, i) => (
+                                                                        <Box key={i} fontSize="sm" color="black">
+                                                                            <strong>{i + 1}.</strong> {comment.text}  {/* 🔹 Correctly displaying comment text */}
+                                                                        </Box>
+                                                                    ))
+                                                                ) : (
+                                                                    <Box textAlign="center" fontSize="sm" fontWeight="bold" color="gray.600">
+                                                                        No comments available
+                                                                    </Box>
+                                                                )}
+                                                            </PopoverBody>
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                </Box>
+                                            </Td>
                                         </Tr>
                                     ))
                             )}
@@ -191,6 +263,7 @@ const ColumnCount: React.FC<ColumnCountProps> = ({ taskId, tableName, selectedCo
                         taskId={taskId}
                         columnName={selectedColumnsForNullRecords} // Updated prop to accept an array
                         tableName={tableName}
+                        bucketName={selectedBucket}
                         onClose={() => setSelectedColumnsForNullRecords(null)}
                     />
                 </div>

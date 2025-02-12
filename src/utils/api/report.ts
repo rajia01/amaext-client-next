@@ -22,56 +22,63 @@ export const getDataView = async (
 };
 
 // ================================= Create comment and save in database =================================
-export const postComment = async (
+export const addComment = async (
   tableName: string,
   taskId: number,
-  columnName: string[],
-  srId: number,
-  comment: string,
+  bucketName: string,
+  commentText: string,
+  columnName?: string, // Optional parameter
 ) => {
-  if (!comment.trim()) return;
+  const params = new URLSearchParams();
+  params.append('bucket_name', bucketName);
+  if (columnName) {
+    params.append('column_name', columnName);
+  }
+
+  const payload = {
+    comments: commentText, // Only `comments` should be in the body
+  };
 
   try {
-    await axios.post(
-      `http://192.168.1.160:8000/${tableName}/${taskId}/comment/${columnName}/${srId}`,
-      { comments: comment },
+    const response = await axios.post(
+      `http://192.168.1.160:8000/${tableName}/${taskId}/comment/?${params.toString()}`, // Attach params here
+      payload,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      },
     );
-    alert('Comment added succesfully!');
-    return;
-    //
+    return response.data;
   } catch (error) {
-    console.error('Error saving comment: ', error);
-    throw new Error('Error saving comment');
+    console.error('Error submitting comment:', error);
+    throw error;
   }
 };
 
 // ================================= Get Comments columnwise to the ids =================================
+
 export const getColumnwiseComments = async (
   tableName: string,
   taskId: number,
-  columnName: string[],
+  bucketName: string,
+  columnName?: string,
 ) => {
   try {
     const response = await axios.get(
-      `http://192.168.1.160:8000/${tableName}/${taskId}/comment/${columnName}`,
+      `http://192.168.1.160:8000/${tableName}/${taskId}/get-comment/`,
+      {
+        params: {
+          bucket_name: bucketName,
+          ...(columnName && { column_name: columnName }), // Include column_name only if provided
+        },
+      },
     );
 
-    const comments = JSON.parse(response.data[0].show_comments);
-
-    // Extract the ids and comments
-    const idsAndComments = comments.map(
-      (comment: { id: number; comment: string }) => ({
-        id: comment.id,
-        comment: comment.comment,
-      }),
-    );
-    return idsAndComments;
-    //
+    return response.data; // Return the response data properly
   } catch (error) {
-    console.error('Error fetching data:', error);
-    throw new Error(
-      error instanceof Error ? error.message : 'Error fetching data',
-    );
+    console.error('Error fetching comments:', error);
+    throw error; // Re-throw the error for handling in the calling function
   }
 };
 
@@ -114,22 +121,26 @@ export const fetchPaginatedData = async (
 };
 
 // ================================= Fetch comment count =================================
-export const getCommentCount = async (tableName: string, taskId: number) => {
+export const getCommentCount = async (
+  tableName: string,
+  taskId: number,
+  bucketName: string,
+  columnName?: string,
+) => {
   try {
     const response = await axios.get(
       `http://192.168.1.160:8000/${tableName}/${taskId}/total-comments`,
+      {
+        params: {
+          bucket_name: bucketName,
+          ...(columnName && { column_name: columnName }), // Include column_name only if provided
+        },
+      },
     );
-    // Parse the stringified JSON object inside total_comments_by_columns
-    const commentCounts = JSON.parse(
-      response.data[0].total_comments_by_columns,
-    );
-    return commentCounts;
-    //
+    return response.data[0]?.total_comment_count || 0;
   } catch (error) {
-    console.error('Error fetching data:', error);
-    throw new Error(
-      error instanceof Error ? error.message : 'Error fetching data',
-    );
+    console.error(`Error fetching comments for ${bucketName}:`, error);
+    return 0;
   }
 };
 

@@ -10,27 +10,46 @@ import {
   Card,
   CardHeader,
   Heading,
-  Badge,
   Tooltip,
   SimpleGrid,
   Table,
   TableContainer,
   Tbody,
-  Td,
-  Th,
   Thead,
+  Td,
   Tr,
-  TableCaption,
-  Popover, PopoverTrigger, PopoverContent, PopoverArrow, PopoverBody
+  Popover, PopoverTrigger, PopoverContent, PopoverArrow, PopoverBody,
+  Th
 } from '@chakra-ui/react';
 import { useState, useRef } from 'react';
 import { FaInfoCircle } from 'react-icons/fa';
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
-import ColumnCount from './ColumnCount';
-import { fetchBackendData } from 'utils/api/report';
+import { fetchBackendData, getColumnwiseComments, getCommentCount } from 'utils/api/report';
 import { GrTooltip } from 'react-icons/gr';
+import ColumnCount from './ColumnCount';
 
+// Define the type for a column entry
+type Column = {
+  column_name: string;
+  not_null_count: number;
+  null_count: number;
+};
+
+// Define the type for a bucket
+type Bucket = {
+  columns: Column[];
+  accuracy: number | string; // Accuracy can be a number or a string ("Full", "Empty", "NaN")
+  common_rows: number;
+  unique_rows: number;
+  pivot_columns: string[];
+};
+
+// Define the response type for the backend data
+type BackendDataResponse = {
+  buckets: Record<string, Bucket>; // Object where keys are bucket names
+  total_buckets: number;
+  total_rows: number;
+};
 
 // ============================== Table Names ==============================
 const seller_table = 'amazon_seller_5lakh';
@@ -45,7 +64,6 @@ function showTable(columns: { column_name: string; null_count: number }[]) {
   return (
     <TableContainer>
       <Table variant="simple" size="sm">
-        <TableCaption color="black.900">Column Details</TableCaption>
         <Thead>
           <Tr>
             <Th sx={{ color: colorMode === 'light' ? 'white' : 'black' }}>Column</Th>
@@ -76,24 +94,48 @@ const Page: React.FC = () => {
   const [selectedBucket, setSelectedBucket] = useState<string | null>(null);
 
 
-  const [allComments, setAllComments] = useState<{ id: string; comment: string }[]>([
-    { id: "bucket1", comment: "This is a sample comment" },
-    { id: "bucket1", comment: "Another comment for bucket1" },
-    { id: "bucket2", comment: "Feedback for bucket2" }
-  ]);
-
   // Fetch backend data when taskId is set
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery<BackendDataResponse>({
     queryKey: ['backendData', tableName, taskId],
-    queryFn: () => fetchBackendData(tableName, taskId),
+    queryFn: () => fetchBackendData(tableName, taskId) as Promise<BackendDataResponse>,
     enabled: !!tableName && !!taskId, // Fetch only when both are available
   });
 
 
+  // Fetch all comment counts for buckets
+  const { data: commentCounts } = useQuery({
+    queryKey: ['bucketCommentCounts', taskId, tableName],
+    queryFn: async () => {
+      if (!data?.buckets || !taskId) return {};
+      const counts: Record<string, number> = {};
+      for (const bucketName of Object.keys(data.buckets)) {
+        const count = await getCommentCount(tableName, taskId, bucketName);
+        counts[bucketName] = count;
+      }
+      return counts;
+    },
+    enabled: !!taskId && !!tableName && !!data?.buckets,
+  });
+
+  // Fetch all comments for buckets
+  const { data: bucketComments } = useQuery({
+    queryKey: ["bucketComments", taskId, tableName],
+    queryFn: async () => {
+      if (!taskId || !data?.buckets) return {};
+      const comments: Record<string, any[]> = {};
+      for (const bucketName of Object.keys(data.buckets)) {
+        const bucketData = await getColumnwiseComments(tableName, taskId, bucketName);
+        comments[bucketName] = bucketData[0]?.comment_buckets || [];
+      }
+      return comments;
+    },
+    enabled: !!taskId && !!data?.buckets,
+  });
+
   const handleTaskIdKeyPress = () => {
     const inputValue = taskIdInputRef.current?.value;
     const newTaskId = Number(inputValue);
-    if (!isNaN(newTaskId) && newTaskId !== taskId) {
+    if (!isNaN(newTaskId)) {
       setTaskId(newTaskId);
       setShowColumnCount(false);
     }
@@ -107,7 +149,6 @@ const Page: React.FC = () => {
       columnCountRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 200);
   };
-
 
   return (
     <Box p={6}>
@@ -227,7 +268,6 @@ const Page: React.FC = () => {
                           <Tr>
                             <Td fontWeight="bold">Comments</Td>
                             <Td textAlign="right">
-
                               <Box display="flex" alignItems="center" gap="6px">
                                 {/* Comment Count */}
                                 <Box
@@ -245,53 +285,46 @@ const Page: React.FC = () => {
                                   minWidth="24px"
                                   textAlign="center"
                                 >
-                                  {allComments?.filter((eachComment) => eachComment.id === bucketName).length || 0}
+                                  {commentCounts?.[bucketName] || 0}
                                 </Box>
 
                                 {/* Comment Popover */}
                                 <Popover trigger="hover" placement="top">
                                   <PopoverTrigger>
-                                    <button>
-                                      <GrTooltip
-                                        style={{
-                                          fontSize: '1.8rem',
-                                          cursor: 'pointer',
-                                          color: '#007bff',
-                                        }}
-                                      />
-                                    </button>
+                                    <Box as="button">
+                                      <GrTooltip style={{ fontSize: "1.2rem", cursor: "pointer", color: "#007bff" }} />
+                                    </Box>
                                   </PopoverTrigger>
-                                  <PopoverContent>
+                                  <PopoverContent bg="gray.100" boxShadow="lg" borderRadius="md" p={3}>
                                     <PopoverArrow />
-                                    <PopoverBody
-                                      dangerouslySetInnerHTML={{
-                                        __html:
-                                          allComments?.filter((eachComment) => eachComment.id === bucketName).length > 0
-                                            ? allComments
-                                              .filter((eachComment) => eachComment.id === bucketName)
-                                              .map((eachComment, index) => `${index + 1}. ${eachComment.comment}`)
-                                              .join('<br />')
-                                            : 'No comments available',
-                                      }}
-                                      style={{ textAlign: "center", zIndex: "10" }}
-                                    />
+                                    <PopoverBody textAlign='left'>
+                                      {bucketComments?.[bucketName]?.length > 0 ? (
+                                        <Box display="flex" flexDirection="column" gap={2}>
+                                          {bucketComments[bucketName].map((comment, index) => (
+                                            <Box key={index} fontSize="sm" color="black">
+                                              <strong>{index + 1}.</strong> {comment.text}
+                                            </Box>
+                                          ))}
+                                        </Box>
+                                      ) : (
+                                        <Box textAlign="center" fontSize="sm" fontWeight="bold" color="gray.600">
+                                          No comments available
+                                        </Box>
+                                      )}
+                                    </PopoverBody>
                                   </PopoverContent>
                                 </Popover>
-                              </Box>
 
+                              </Box>
                             </Td>
                           </Tr>
                         </Tbody>
                       </Table>
                     </TableContainer>
-
-
-
                   </CardHeader>
                 </Card>
               ))}
           </SimpleGrid>
-
         )
       ) : (
         <Box textAlign="center" fontSize="lg" fontWeight="bold" color="gray.500" mt={6}>
@@ -308,13 +341,10 @@ const Page: React.FC = () => {
             selectedColumns={selectedColumns}
             selectedBucket={selectedBucket}
           />
-
         </Box>
       )}
-
     </Box>
   );
 };
 
 export default Page;
-

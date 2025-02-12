@@ -13,35 +13,25 @@ import {
     Thead,
     Tr,
     useColorMode,
-    PopoverContent,
-    Popover,
-    PopoverBody,
-    PopoverArrow,
-    PopoverTrigger,
+    Skeleton,
+    Stack,
 } from '@chakra-ui/react';
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
 import React, { useEffect, useRef, useState } from 'react';
 import { FaEye } from 'react-icons/fa';
-import { GrTooltip } from 'react-icons/gr';
-import {
-    fetchNullRecords,
-    getColumnwiseComments,
-    postComment,
-} from 'utils/api/report';
-import { getSkeleton } from 'utils/skeleton';
+import { fetchNullRecords, addComment } from 'utils/api/report';
 import DBRecord from './DBRecord';
 
 interface NullRecordsProps {
     taskId: number;
     columnName: string[];
     tableName: string;
+    bucketName: string;
     onClose: () => void;
 }
 
 interface Record {
     id: any;
-    ddmapp_amazonsellerdetails_data_1028_id: string;
     link: string;
     created_date: string;
     modified_date: string;
@@ -53,10 +43,11 @@ const NullRecords: React.FC<NullRecordsProps> = ({
     taskId,
     columnName,
     tableName,
+    bucketName,
     onClose,
 }) => {
     const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
-    const [comment, setComment] = useState<{ [id: number]: string }>({});
+    const [comment, setComment] = useState<string>('');
     const dbViewRef = useRef<HTMLDivElement>(null);
     const [rowsPerPage] = useState(7);
     const [currentPage, setCurrentPage] = useState<number>(1);
@@ -74,17 +65,24 @@ const NullRecords: React.FC<NullRecordsProps> = ({
     });
 
     // **************************************************************************************
-
-    const handleCommentSubmit = (srId: number, comment: string) => {
+    const handleCommentSubmit = () => {
         if (comment.trim()) {
-            console.log(`Submitting comment for record ${srId}: ${comment}`);
+            console.log(`Submitting comment: ${comment}`);
 
-            postComment(tableName, taskId, columnName, srId, comment);
+            // Check if it's a single column or a bucket-wide comment
+            const isSingleColumn = columnName.length === 1;
 
-            setComment((prevComments) => ({
-                ...prevComments,
-                [srId]: '',
-            }));
+            // Call API with appropriate parameters
+            addComment(
+                tableName,
+                taskId,
+                bucketName,
+                comment,
+                isSingleColumn ? columnName[0] : undefined
+            );
+
+            // Clear input after submission
+            setComment('');
         }
     };
 
@@ -92,14 +90,11 @@ const NullRecords: React.FC<NullRecordsProps> = ({
     const handleViewDBRecord = (record_id: string) => {
         setSelectedRecordId(record_id);
         setTimeout(() => {
-            if (dbViewRef.current) {
-                dbViewRef.current.scrollIntoView({ behavior: 'smooth' });
-            }
+            dbViewRef.current?.scrollIntoView({ behavior: 'smooth' });
         }, 200);
     };
 
     const totalPages = records ? Math.ceil(records.total_items / rowsPerPage) : 0;
-    console.log('total pages: ', totalPages);
 
     const handlePageChange = (page: number) => {
         if (page > 0 && page <= totalPages) {
@@ -107,37 +102,16 @@ const NullRecords: React.FC<NullRecordsProps> = ({
         }
     };
 
-    // Fetch all comments for the null records
-    const { data: allComments } = useQuery({
-        queryKey: ['comments', tableName, taskId, columnName],
-        queryFn: () => getColumnwiseComments(tableName, taskId, columnName),
-    });
-
-    console.log('Comments: ', allComments);
-
-    useEffect(() => {
-        if (taskId && columnName) {
-        }
-    }, [currentPage, taskId]);
-
-    const handleCommentChange = (id: number, comment: string) => {
-        setComment(() => ({
-            [id]: comment,
-        }));
-    };
+    useEffect(() => { }, [currentPage, taskId]);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {/* <Box> */}
-            {/* <Button onClick={onClose} colorScheme="red" size="sm" mb={4}> */}
-            {/* Close */}
-            {/* </Button> */}
-            {/* Add your existing NullRecords content here */}
-
-            {/* </Box> */}
-
             <div
-                style={{ marginTop: '1rem', padding: '1rem', border: '1px solid #ccc' }}
+                style={{
+                    padding: '1rem',
+                    border: '1px solid #ccc',
+                    marginTop: '3rem',
+                }}
             >
                 <div>
                     <div style={{ fontSize: '1.6rem' }}>
@@ -145,7 +119,50 @@ const NullRecords: React.FC<NullRecordsProps> = ({
                         <span style={{ color: 'yellow', fontSize: '2rem' }}>/</span>{' '}
                         {taskId}{' '}
                         <span style={{ color: 'yellow', fontSize: '2rem' }}>/</span>{' '}
-                        {columnName}
+                        {bucketName}{' '}
+                        <span style={{ color: 'yellow', fontSize: '2rem' }}>/</span>{' '}
+                        {columnName.join(', ')}
+                    </div>
+
+                    <div>
+                        <Flex align="center" justify="space-between" width="100%" gap="8">
+                            <input
+                                type="text"
+                                value={comment}
+                                onChange={(e) => setComment(e.target.value)}
+                                placeholder="Type your comment"
+                                style={{
+                                    color: colorMode === 'light' ? 'black' : 'white',
+                                    padding: '0.5rem',
+                                    marginRight: '0.5rem',
+                                    width: '80%',
+                                    backgroundColor: 'transparent',
+                                    border: '1px solid #ccc',
+                                    borderRadius: '4px',
+                                }}
+                                className={
+                                    colorMode === 'light'
+                                        ? 'light-placeholder'
+                                        : 'dark-placeholder'
+                                }
+                            />
+
+                            <button
+                                onClick={handleCommentSubmit}
+                                style={{
+                                    fontSize: '0.8rem',
+                                    padding: '0.5rem 1rem',
+                                    cursor: 'pointer',
+                                    backgroundColor: '#007bff',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '50px',
+                                    width: '10%',
+                                }}
+                            >
+                                Submit
+                            </button>
+                        </Flex>
                     </div>
                 </div>
 
@@ -154,17 +171,20 @@ const NullRecords: React.FC<NullRecordsProps> = ({
                         <Table variant="simple">
                             <Thead>
                                 <Tr>
-                                    <Th>Amazon Seller ID</Th>
+                                    <Th>ID (Primary Key)</Th>
                                     <Th>Link</Th>
                                     <Th>Created Date</Th>
                                     <Th>Modified Date</Th>
                                     <Th>Date Difference</Th>
-                                    <Th>Comment</Th>
                                 </Tr>
                             </Thead>
                             <Tbody>
                                 {isLoading ? (
-                                    getSkeleton(5, 6)
+                                    <Stack>
+                                        <Skeleton height="40px" />
+                                        <Skeleton height="40px" />
+                                        <Skeleton height="40px" />
+                                    </Stack>
                                 ) : isError ? (
                                     <Tr>
                                         <Td colSpan={6}>
@@ -202,106 +222,6 @@ const NullRecords: React.FC<NullRecordsProps> = ({
                                             <Td>{record.created_date}</Td>
                                             <Td>{record.modified_date}</Td>
                                             <Td>{record.date_diff}</Td>
-                                            <Td>
-                                                <Flex
-                                                    align="center"
-                                                    justify="space-between"
-                                                    width="100%"
-                                                    gap="8"
-                                                >
-                                                    <input
-                                                        type="text"
-                                                        value={comment[record.id] || ''}
-                                                        onChange={(e) =>
-                                                            handleCommentChange(record.id, e.target.value)
-                                                        }
-                                                        placeholder="Type your comment"
-                                                        style={{
-                                                            color: colorMode === 'light' ? 'black' : 'white',
-                                                            padding: '0.5rem',
-                                                            marginRight: '0.5rem',
-                                                            width: '60%',
-                                                            backgroundColor: 'transparent',
-                                                            border: '1px solid #ccc',
-                                                            borderRadius: '4px',
-                                                        }}
-                                                        className={
-                                                            colorMode === 'light'
-                                                                ? 'light-placeholder'
-                                                                : 'dark-placeholder'
-                                                        }
-                                                    />
-
-                                                    {/* Comment count */}
-                                                    <span
-                                                        style={{
-                                                            display: 'inline-block',
-                                                            padding: '0.2rem 0.5rem',
-                                                            border: '1px solid #ccc',
-                                                            borderRadius: '4px',
-                                                        }}
-                                                    >
-                                                        {allComments?.filter(
-                                                            (eachComment: any) =>
-                                                                eachComment.id === record.id,
-                                                        ).length || 0}
-                                                    </span>
-                                                    <Popover trigger="hover" placement="top">
-                                                        <PopoverTrigger>
-                                                            <button>
-                                                                <GrTooltip
-                                                                    style={{
-                                                                        fontSize: '1.8rem',
-                                                                        cursor: 'pointer',
-                                                                        color: '#007bff',
-                                                                    }}
-                                                                />
-                                                            </button>
-                                                        </PopoverTrigger>
-                                                        <PopoverContent>
-                                                            <PopoverArrow />
-                                                            <PopoverBody
-                                                                dangerouslySetInnerHTML={{
-                                                                    __html:
-                                                                        allComments?.filter(
-                                                                            (eachComment: any) =>
-                                                                                eachComment.id === record.id,
-                                                                        ).length > 0
-                                                                            ? allComments
-                                                                                .filter(
-                                                                                    (eachComment: any) =>
-                                                                                        eachComment.id === record.id,
-                                                                                )
-                                                                                .map(
-                                                                                    (eachComment: any, index: number) =>
-                                                                                        `${index + 1}. ${eachComment.comment
-                                                                                        }`,
-                                                                                )
-                                                                                .join('<br />')
-                                                                            : 'No comments available',
-                                                                }}
-                                                            />
-                                                        </PopoverContent>
-                                                    </Popover>
-
-                                                    <button
-                                                        onClick={() =>
-                                                            handleCommentSubmit(record.id, comment[record.id])
-                                                        }
-                                                        style={{
-                                                            fontSize: '0.8rem',
-                                                            padding: '0.5rem 1rem',
-                                                            cursor: 'pointer',
-                                                            backgroundColor: '#007bff',
-                                                            color: 'white',
-                                                            border: 'none',
-                                                            borderRadius: '50px',
-                                                        }}
-                                                    >
-                                                        Submit
-                                                    </button>
-                                                </Flex>
-                                            </Td>
                                         </Tr>
                                     ))
                                 ) : (
@@ -315,39 +235,24 @@ const NullRecords: React.FC<NullRecordsProps> = ({
                 </div>
 
                 {/* Pagination */}
-                <div style={{ marginBottom: '4rem' }}>
-                    <Box mt={4} display="flex" justifyContent="center">
-                        <Button
-                            onClick={() => handlePageChange(currentPage - 1)}
-                            isDisabled={currentPage === 1}
-                            mr={2}
-                        >
-                            Previous
-                        </Button>
-                        <Button
-                            onClick={() => handlePageChange(currentPage + 1)}
-                            isDisabled={currentPage === totalPages}
-                        >
-                            Next
-                        </Button>
-                    </Box>
-                    <Box mt={2} textAlign="center">
-                        Page {currentPage} of {totalPages}
-                    </Box>
-                </div>
+                <Box mt={4} display="flex" justifyContent="center">
+                    <Button onClick={() => handlePageChange(currentPage - 1)} isDisabled={currentPage === 1} mr={2}>
+                        Previous
+                    </Button>
+                    <Button onClick={() => handlePageChange(currentPage + 1)} isDisabled={currentPage === totalPages}>
+                        Next
+                    </Button>
+                </Box>
+                <Box mt={2} textAlign="center">
+                    Page {currentPage} of {totalPages}
+                </Box>
             </div>
 
-            <div>
-                {selectedRecordId && (
-                    <div ref={dbViewRef}>
-                        <DBRecord
-                            tableName={tableName}
-                            taskId={taskId}
-                            recordId={selectedRecordId}
-                        />
-                    </div>
-                )}
-            </div>
+            {selectedRecordId && (
+                <div ref={dbViewRef}>
+                    <DBRecord tableName={tableName} taskId={taskId} recordId={selectedRecordId} />
+                </div>
+            )}
         </div>
     );
 };
