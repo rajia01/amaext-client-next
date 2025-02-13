@@ -101,7 +101,7 @@ const NullRecords: React.FC<NullRecordsProps> = ({
     }
   };
 
-  useEffect(() => {}, [currentPage, taskId]);
+  useEffect(() => { }, [currentPage, taskId]);
 
   const getCommentPlaceholder = () => {
     return columnName.length === 1
@@ -150,22 +150,9 @@ const NullRecords: React.FC<NullRecordsProps> = ({
                     : 'dark-placeholder'
                 }
               />
-
-              <button
-                onClick={handleCommentSubmit}
-                style={{
-                  fontSize: '0.9rem',
-                  padding: '0.75rem 1.5rem',
-                  cursor: 'pointer',
-                  backgroundColor: '#007bff',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  whiteSpace: 'nowrap',
-                }}
-              >
+              <Button onClick={handleCommentSubmit} size="md" colorScheme="blue">
                 Submit
-              </button>
+              </Button>
             </Flex>
           </div>
         </div>
@@ -263,6 +250,8 @@ const NullRecords: React.FC<NullRecordsProps> = ({
             tableName={tableName}
             taskId={taskId}
             recordId={selectedRecordId}
+            columnName={columnName}
+            bucketName={bucketName}
           />
         </div>
       )}

@@ -23,8 +23,7 @@ import { FaEye } from 'react-icons/fa';
 import { GrTooltip } from 'react-icons/gr';
 import {
   fetchPaginatedData,
-  getColumnwiseComments,
-  getCommentCount,
+  fetchColumnComments
 } from 'utils/api/report';
 import NullRecords from './NullRecords';
 
@@ -40,6 +39,27 @@ interface ColumnCountProps {
   selectedColumns: { column_name: string; null_count: number }[];
   selectedBucket: string;
 }
+
+interface ColumnComments {
+  flag: number;
+  text: string;
+  column: string;
+  'time-stamp': string;
+}
+
+interface ColumnData {
+  column_comments: ColumnComments[];
+  column_comment_count: number;
+}
+
+interface BucketData {
+  [columnName: string]: ColumnData;
+}
+
+interface ApiResponse {
+  [bucketName: string]: BucketData;
+}
+
 
 // ========================================== ShowBucketColumns Component ==========================================
 
@@ -78,45 +98,26 @@ const ShowBucketColumns: React.FC<ColumnCountProps> = ({
       enabled: !!taskId && !!tableName && !!selectedBucket,
     });
 
-  // Fetch column-wise comment counts
-  const { data: columnCommentCounts } = useQuery({
-    queryKey: ['columnCommentCounts', taskId, tableName, selectedBucket],
-    queryFn: async () => {
-      if (!taskId || !tableName || !selectedBucket) return {};
-      const counts: Record<string, number> = {};
-      for (const column of selectedColumns) {
-        const count = await getCommentCount(
-          tableName,
-          taskId,
-          selectedBucket,
-          column.column_name,
-        );
-        counts[column.column_name] = count;
-      }
-      return counts;
-    },
+
+  // Fetch Column Comments
+  const { data: columnCommentsData, isLoading: isCommentsLoading } = useQuery<ApiResponse>({
+    queryKey: ['columnComments', tableName, taskId, selectedBucket],
+    queryFn: () => fetchColumnComments(tableName, taskId, selectedBucket),
     enabled: !!taskId && !!tableName && !!selectedBucket,
   });
 
-  // Fetch column-wise comments
-  const { data: columnComments } = useQuery({
-    queryKey: ['columnComments', taskId, tableName, selectedBucket],
-    queryFn: async () => {
-      if (!taskId || !tableName || !selectedBucket) return {};
-      const comments: Record<string, any[]> = {};
-      for (const column of selectedColumns) {
-        const columnData = await getColumnwiseComments(
-          tableName,
-          taskId,
-          selectedBucket,
-          column.column_name,
-        );
-        comments[column.column_name] = columnData[0]?.comment_column || []; // 🔹 Corrected data structure access
-      }
-      return comments;
-    },
-    enabled: !!taskId && !!tableName && !!selectedBucket,
-  });
+  // Extract comment count and comments
+  const columnCommentCounts: Record<string, number> = {};
+  const columnComments: Record<string, { flag: number; text: string }[]> = {};
+
+  if (columnCommentsData) {
+    Object.entries(columnCommentsData[selectedBucket] || {}).forEach(
+      ([columnName, columnData]) => {
+        columnCommentCounts[columnName] = columnData.column_comment_count;
+        columnComments[columnName] = columnData.column_comments || [];
+      },
+    );
+  }
 
   useEffect(() => {
     if (paginatedData?.total_count !== undefined) {
@@ -227,7 +228,7 @@ const ShowBucketColumns: React.FC<ColumnCountProps> = ({
                         minWidth="30px"
                         textAlign="center"
                       >
-                        {columnCommentCounts?.[item.column_name] || 0}
+                        {columnCommentCounts[item.column_name] || 0}
                       </Box>
                       <Popover trigger="hover" placement="top">
                         <PopoverTrigger>
@@ -249,7 +250,7 @@ const ShowBucketColumns: React.FC<ColumnCountProps> = ({
                         >
                           <PopoverArrow />
                           <PopoverBody textAlign="left">
-                            {columnComments?.[item.column_name]?.length > 0 ? (
+                            {columnComments[item.column_name]?.length > 0 ? (
                               columnComments[item.column_name].map(
                                 (comment, i) => (
                                   <Box key={i} fontSize="sm" color="black">

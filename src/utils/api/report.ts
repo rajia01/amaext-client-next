@@ -56,32 +56,6 @@ export const addComment = async (
   }
 };
 
-// ================================= Get Comments columnwise to the ids =================================
-
-export const getColumnwiseComments = async (
-  tableName: string,
-  taskId: number,
-  bucketName: string,
-  columnName?: string,
-) => {
-  try {
-    const response = await axios.get(
-      `${url}/${tableName}/${taskId}/get-comment/`,
-      {
-        params: {
-          bucket_name: bucketName,
-          ...(columnName && { column_name: columnName }), // Include column_name only if provided
-        },
-      },
-    );
-
-    return response.data; // Return the response data properly
-  } catch (error) {
-    console.error('Error fetching comments:', error);
-    throw error; // Re-throw the error for handling in the calling function
-  }
-};
-
 // ====================================== Null Count columnwise ======================================
 export const fetchPaginatedData = async (
   tableName: string,
@@ -114,31 +88,6 @@ export const fetchPaginatedData = async (
     throw new Error(
       error instanceof Error ? error.message : 'Error fetching data',
     );
-  }
-};
-
-// ================================= Fetch comment count =================================
-export const getCommentCount = async (
-  tableName: string,
-  taskId: number,
-  bucketName: string,
-  columnName?: string,
-) => {
-  try {
-    const response = await axios.get(
-      `${url}/${tableName}/${taskId}/total-comments`,
-      {
-        params: {
-          bucket_name: bucketName,
-          ...(columnName && { column_name: columnName }), // Include column_name only if provided
-        },
-      },
-    );
-
-    return response.data?.total_comment_count || 0;
-  } catch (error) {
-    console.error(`Error fetching comments for ${bucketName}:`, error);
-    return 0;
   }
 };
 
@@ -178,7 +127,7 @@ export const fetchNullRecords = async (
 
 // ================================= Fetch Bucketwise Data =================================
 
-export const fetchBackendData = async (tableName: string, taskId: number) => {
+export const fetchBucketData = async (tableName: string, taskId: number) => {
   if (!tableName || !taskId) return null; // Ensure table name and task ID are provided
 
   try {
@@ -187,5 +136,50 @@ export const fetchBackendData = async (tableName: string, taskId: number) => {
   } catch (error) {
     console.error('Error fetching backend data:', error);
     throw error; // Ensure the error is handled in the caller
+  }
+};
+// ========================= Fetch Bucketwise Comments and Comment Count ==========================
+export const fetchBucketComments = async (
+  tableName: string,
+  taskId: number,
+) => {
+  if (!tableName || !taskId) {
+    throw new Error('Table name and task ID are required');
+  }
+
+  try {
+    const { data } = await axios.get(
+      `${url}/${tableName}/${taskId}/bucket-comments/`,
+    );
+    return data; // Returning the entire response object
+  } catch (error) {
+    console.error('Error fetching bucket comments:', error);
+    throw new Error('Failed to fetch bucket comments. Please try again.');
+  }
+};
+
+// ========================= Fetch Columnwise Comments and Comment Count ==========================
+export const fetchColumnComments = async (
+  tableName: string,
+  taskId: number,
+  bucketName: string,
+) => {
+  if (!tableName || !taskId || !bucketName) {
+    throw new Error('Table name, task ID, and bucket name are required');
+  }
+
+  try {
+    const { data } = await axios.get(
+      `${url}/${tableName}/${taskId}/column-comments/`,
+    );
+
+    if (!data[bucketName]) {
+      throw new Error(`Bucket "${bucketName}" not found in response`);
+    }
+
+    return { [bucketName]: data[bucketName] }; // Return only the requested bucket
+  } catch (error) {
+    console.error('Error fetching column comments:', error);
+    throw new Error('Failed to fetch column comments. Please try again.');
   }
 };
