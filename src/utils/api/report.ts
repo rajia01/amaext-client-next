@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const url = 'http://127.0.0.1:8000';
+const url = 'http://192.168.1.160:8000';
 
 // ================================= Get columnwise record data =================================
 export const getDataView = async (
@@ -170,14 +170,10 @@ export const fetchColumnComments = async (
 
   try {
     const { data } = await axios.get(
-      `${url}/${tableName}/${taskId}/column-comments/`,
+      `${url}/${tableName}/${taskId}/${bucketName}/column-comments/`,
     );
 
-    if (!data[bucketName]) {
-      throw new Error(`Bucket "${bucketName}" not found in response`);
-    }
-
-    return { [bucketName]: data[bucketName] }; // Return only the requested bucket
+    return { data }; // Return only the requested bucket
   } catch (error) {
     console.error('Error fetching column comments:', error);
     throw new Error('Failed to fetch column comments. Please try again.');

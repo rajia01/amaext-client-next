@@ -47,6 +47,7 @@ const NullRecords: React.FC<NullRecordsProps> = ({
 }) => {
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
   const [comment, setComment] = useState<string>('');
+  const [storedTotalPages, setStoredTotalPages] = useState(0);
   const dbViewRef = useRef<HTMLDivElement>(null);
   const [rowsPerPage] = useState(7);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -95,13 +96,23 @@ const NullRecords: React.FC<NullRecordsProps> = ({
 
   const totalPages = records ? Math.ceil(records.total_items / rowsPerPage) : 0;
 
+
+  useEffect(() => {
+    if (records?.total_items) {
+      const newTotalPages = Math.ceil(records.total_items / rowsPerPage);
+      if (newTotalPages > 0) {
+        setStoredTotalPages(newTotalPages);
+      }
+    }
+  }, [records, rowsPerPage]);
+
   const handlePageChange = (page: number) => {
-    if (page > 0 && page <= totalPages) {
+    if (page > 0 && page <= storedTotalPages) {
       setCurrentPage(page);
     }
   };
 
-  useEffect(() => { }, [currentPage, taskId]);
+  // useEffect(() => { }, [currentPage, taskId]);
 
   const getCommentPlaceholder = () => {
     return columnName.length === 1
@@ -115,7 +126,7 @@ const NullRecords: React.FC<NullRecordsProps> = ({
         style={{
           padding: '1rem',
           border: '1px solid #ccc',
-          marginTop: '3rem',
+          marginTop: '6rem',
         }}
       >
         <div>
@@ -172,7 +183,7 @@ const NullRecords: React.FC<NullRecordsProps> = ({
               </Thead>
               <Tbody>
                 {isLoading ? (
-                  getSkeleton(5, 6)
+                  getSkeleton(7, 6)
                 ) : isError ? (
                   <Tr>
                     <Td colSpan={6}>
@@ -226,6 +237,13 @@ const NullRecords: React.FC<NullRecordsProps> = ({
         {/* Pagination */}
         <Box mt={4} display="flex" justifyContent="center">
           <Button
+            onClick={() => handlePageChange(1)}
+            isDisabled={currentPage === 1}
+            mr={2}
+          >
+            First Page
+          </Button>
+          <Button
             onClick={() => handlePageChange(currentPage - 1)}
             isDisabled={currentPage === 1}
             mr={2}
@@ -234,14 +252,22 @@ const NullRecords: React.FC<NullRecordsProps> = ({
           </Button>
           <Button
             onClick={() => handlePageChange(currentPage + 1)}
-            isDisabled={currentPage === totalPages}
+            isDisabled={currentPage === storedTotalPages}
+            mr={2}
           >
             Next
           </Button>
+          <Button
+            onClick={() => handlePageChange(storedTotalPages)}
+            isDisabled={currentPage === storedTotalPages}
+          >
+            Last Page
+          </Button>
         </Box>
         <Box mt={2} textAlign="center">
-          Page {currentPage} of {totalPages}
+          Page {currentPage} of {storedTotalPages}
         </Box>
+
       </div>
 
       {selectedRecordId && (

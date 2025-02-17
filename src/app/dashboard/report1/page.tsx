@@ -30,7 +30,7 @@ import {
   useColorMode,
 } from '@chakra-ui/react';
 import { useQuery } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MdDownload } from "react-icons/md";
 import { FaInfoCircle, FaCheckCircle } from 'react-icons/fa';
 import { GrTooltip } from 'react-icons/gr';
@@ -39,34 +39,33 @@ import {
   fetchBucketComments,
 } from 'utils/api/report';
 import ShowBucketColumns from './ShowBucketColumns';
+import { blacken } from '@chakra-ui/theme-tools';
 
 // Define the type for a column entry
 type Column = {
+  type: string
+  null_count: number;
   column_name: string;
   not_null_count: number;
-  null_count: number;
 };
 
 // Define the type for a bucket
 type Bucket = {
   columns: Column[];
-  accuracy: number | string;
-  common_rows: number;
-  unique_rows: number;
-  pivot_columns: string[];
+  Pivot_Columns: string[];
+  Common_Null_Count: number;
+  Uncommon_Null_Count: number;
+  Column_Inter_Dependency: string; // Updated to accept both string and number
 };
 
 // Define the response type for the backend data
 type BackendDataResponse = {
-  buckets: Record<string, Bucket>; // Object where keys are bucket names
-  total_buckets: number;
-  total_rows: number;
+  buckets: Record<string, Bucket>;
 };
 
 type BucketComment = {
   flag: string;
   text: string;
-  [bucketName: string]: string; // Represents dynamic bucket names as keys
   'time-stamp': string;
 };
 
@@ -74,7 +73,6 @@ type BucketCommentResponse = Record<
   string,
   {
     columns: string[];
-    accuracy: number;
     final_flag: boolean;
     bucket_comments: BucketComment[];
     bucket_comment_count: number;
@@ -82,14 +80,15 @@ type BucketCommentResponse = Record<
 >;
 
 // ============================== Table Names ==============================
-const seller_table = 'amazon_seller_5lakh';
+// tbl_amazonsellerdetails_ia
+const seller_table = 'kevin_testing';
 const product_details = 'ddmapp_amazonproductdetailsnew_data_1028';
 const product_list = 'ddmapp_amazonproductlist_data_1028';
 
 const tableName: string = seller_table;
 
 // ============================ Table Component ============================
-function showTable(columns: { column_name: string; null_count: number }[]) {
+function showTable(columns: { column_name: string; null_count: number }[], Pivot_Columns: string[]) {
   const { colorMode } = useColorMode();
   return (
     <TableContainer>
@@ -107,9 +106,21 @@ function showTable(columns: { column_name: string; null_count: number }[]) {
         <Tbody>
           {columns?.map((column, index) => (
             <Tr key={index}>
-              <Td color="black.900">{column.column_name}</Td>
+              <Td
+                color={Pivot_Columns.includes(column.column_name) ? 'red.500' : colorMode === 'light' ? 'black' : 'white'}
+              >
+                {Pivot_Columns.includes(column.column_name) ? (
+                  <Tooltip label="This column is inversely related to others" aria-label="Pivot column tooltip" placement="top" hasArrow>
+                    <Box as="span" cursor="pointer">
+                      {column.column_name}
+                    </Box>
+                  </Tooltip>
+                ) : (
+                  column.column_name
+                )}
+              </Td>
               <Td textAlign="right">
-                {column.null_count ? `${column.null_count}` : 'No null'}
+                {column.null_count ? `${column.null_count}` : 'No null'} {/* Fixed template literal */}
               </Td>
             </Tr>
           ))}
@@ -118,9 +129,8 @@ function showTable(columns: { column_name: string; null_count: number }[]) {
     </TableContainer>
   );
 }
-
 // ========================= Add the small card component at the top right =========================
-const AccuracyInfoCard: React.FC = () => {
+const Column_Inter_DependencyInfoCard: React.FC = () => {
   const { colorMode } = useColorMode();
   return (
     <Card
@@ -136,7 +146,7 @@ const AccuracyInfoCard: React.FC = () => {
       borderColor={colorMode === 'light' ? 'blue.300' : 'blue.500'} // Highlight border
     >
       <Heading size="md" color="blue.600" textAlign="left" marginY="1">
-        Accuracy Values
+        Column Inter-Dependency Values
       </Heading>
       <Box>
         <Text
@@ -165,6 +175,9 @@ const Page: React.FC = () => {
     { column_name: string; null_count: number }[] | null
   >(null);
   const [selectedBucket, setSelectedBucket] = useState<string | null>(null);
+  const [placement, setPlacement] = useState<"right-start" | "left-start">("right-start");
+  const popoverRef = useRef<HTMLDivElement | null>(null);
+
 
   // Fetch bucket data when taskId is set
   const { data, isLoading, error } = useQuery<BackendDataResponse>({
@@ -191,9 +204,11 @@ const Page: React.FC = () => {
     }
   };
 
+  // Update the `handleCardClick` method to pass the Pivot_Columns
   const handleCardClick = (
     bucketName: string,
     columns: { column_name: string; null_count: number }[],
+    Pivot_Columns: string[] // Make sure pivot columns are passed
   ) => {
     setSelectedColumns(columns);
     setSelectedBucket(bucketName);
@@ -203,21 +218,23 @@ const Page: React.FC = () => {
     }, 200);
   };
 
+
   const renderSkeletons = () => {
     return Array.from({ length: 6 }).map((_, index) => (
       <Card
         key={index}
-        w="370px"
+        w="370px"  // Match the card width
         h="auto"
-        p={5}
+        p={4}  // Adjust padding to match the card
         borderRadius="lg"
         boxShadow="lg"
       >
-        <Skeleton height="40px" mb={4} />
-        <SkeletonText mt="4" noOfLines={4} spacing="4" />
+        <Skeleton height="40px" mb={4} />  {/* Skeleton for the title */}
+        <SkeletonText mt="4" noOfLines={4} spacing="4" />  {/* Skeleton for the content */}
       </Card>
     ));
   };
+
 
   const handleDownload = async (bucket: string) => {
     try {
@@ -251,10 +268,23 @@ const Page: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    if (popoverRef.current) {
+      const popoverRect = popoverRef.current.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+
+      // If popover is overflowing on the right, move it to the left
+      if (popoverRect.right > viewportWidth) {
+        setPlacement("left-start");
+      } else {
+        setPlacement("right-start");
+      }
+    }
+  }, []);
   return (
     <Box p={6}>
-      {/* Accuracy Info Card */}
-      <AccuracyInfoCard />
+      {/* Column_Inter_Dependency Info Card */}
+      <Column_Inter_DependencyInfoCard />
 
       {/* =================================== Table-Name =================================== */}
       <Box mb={6}>
@@ -333,10 +363,18 @@ const Page: React.FC = () => {
             Error fetching data
           </Box>
         ) : (
-          <SimpleGrid minChildWidth="300px" spacing={5} justifyContent="center">
+          <SimpleGrid
+            columns={{ base: 1, sm: 2, md: 3, lg: 4 }} // Ensures responsiveness
+            spacing={6} // Provides a fixed gap between cards
+            minChildWidth="370px" // Ensures cards don't shrink too much
+            justifyContent="center"
+            alignItems="stretch"
+            display="grid"
+            gridTemplateColumns="repeat(auto-fit, minmax(370px, 1fr))" // More flexible for responsiveness
+          >
             {data?.buckets &&
               Object.entries(data.buckets).map(
-                ([bucketName, { columns, accuracy, common_rows, unique_rows }]) => {
+                ([bucketName, { columns, Column_Inter_Dependency, Common_Null_Count, Uncommon_Null_Count }]) => {
                   // Extract comment counts and bucket comments
                   const commentCounts = bucketComment
                     ? Object.fromEntries(
@@ -370,7 +408,7 @@ const Page: React.FC = () => {
                         boxShadow: "0px 0px 15px rgba(0, 120, 255, 0.4)",
                         cursor: "pointer",
                       }}
-                      onClick={() => handleCardClick(bucketName, columns)}
+                      onClick={() => handleCardClick(bucketName, columns, data.buckets[bucketName].Pivot_Columns)} // Pass Pivot_Columns here
                     >
                       <CardHeader pb={3} textAlign="center">
 
@@ -378,36 +416,37 @@ const Page: React.FC = () => {
 
                         <Heading size="md" color="blue.600" display="inline-flex" alignItems="center">
                           {bucketName}
-                          {accuracy === 'Full' && (
-                            <FaCheckCircle color="light green" style={{ marginLeft: '5px' }} />
+                          {Column_Inter_Dependency === 'Full' && (
+                            <FaCheckCircle color="#90EE90" style={{ marginLeft: '5px' }} />
                           )}
                         </Heading>
 
                         <Box position="absolute" top={2} right={2} fontSize="lg" cursor="pointer">
-                          <Box onClick={(event) => event.stopPropagation()}> {/* Prevents card click */}
-                            <Popover>
-                              <PopoverTrigger>
+                          <Popover placement={placement} trigger="click">
+                            <PopoverTrigger>
+                              <Box onClick={(event) => event.stopPropagation()}> {/* Prevents card click */}
                                 <FaInfoCircle />
-                              </PopoverTrigger>
-                              <PopoverContent
-                                maxH="300px"
-                                overflowY="auto" // Enables vertical scrolling
-                                overflowX="hidden" // Disables horizontal scrolling
-                                boxShadow="lg"
-                                borderRadius="md"
-                                p={3}
-                                onClick={(event) => event.stopPropagation()} // Prevents card click event
-                                width="fit-content" // Ensures it only takes necessary width
-                                minW="200px" // Prevents it from shrinking too much
-                              >
-                                <PopoverArrow />
-                                <PopoverCloseButton />
-                                <PopoverBody whiteSpace="nowrap"> {/* Prevents unnecessary text wrapping */}
-                                  {showTable(columns)}
-                                </PopoverBody>
-                              </PopoverContent>
-                            </Popover>
-                          </Box>
+                              </Box>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              ref={popoverRef}
+                              maxH="300px"
+                              overflowY="auto" // Enables vertical scrolling
+                              overflowX="hidden" // Disables horizontal scrolling
+                              boxShadow="lg"
+                              borderRadius="md"
+                              p={3}
+                              onClick={(event: React.MouseEvent<HTMLButtonElement>) => event.stopPropagation()} // Prevents card click event
+                              width="fit-content" // Ensures it only takes necessary width
+                              minW="200px" // Prevents it from shrinking too much
+                            >
+                              <PopoverArrow />
+                              <PopoverCloseButton />
+                              <PopoverBody whiteSpace="nowrap">
+                                {showTable(columns, data?.buckets[bucketName]?.Pivot_Columns || [])} {/* Pass Pivot_Columns here */}
+                              </PopoverBody>
+                            </PopoverContent>
+                          </Popover>
                         </Box>
 
 
@@ -417,7 +456,7 @@ const Page: React.FC = () => {
                               <Tr>
                                 <Td fontWeight="bold">Column Inter-Dependency</Td>
                                 <Td textAlign="right">
-                                  {typeof accuracy === "number" ? accuracy.toFixed(2) : accuracy}
+                                  {typeof Column_Inter_Dependency === "number" ? parseFloat(Column_Inter_Dependency) : Column_Inter_Dependency}
                                 </Td>
                               </Tr>
                               <Tr>
@@ -426,11 +465,11 @@ const Page: React.FC = () => {
                               </Tr>
                               <Tr>
                                 <Td fontWeight="bold">Common Null Count</Td>
-                                <Td textAlign="right">{common_rows ?? "N/A"}</Td>
+                                <Td textAlign="right">{Common_Null_Count ?? "N/A"}</Td>
                               </Tr>
                               <Tr>
                                 <Td fontWeight="bold">Uncommon Null Count</Td>
-                                <Td textAlign="right">{unique_rows != null && common_rows != null ? unique_rows - common_rows : "N/A"}</Td>
+                                <Td textAlign="right">{Uncommon_Null_Count != null && Common_Null_Count != null ? Uncommon_Null_Count - Common_Null_Count : "N/A"}</Td>
                               </Tr>
                               <Tr>
                                 <Td fontWeight="bold">Comments</Td>
@@ -459,7 +498,7 @@ const Page: React.FC = () => {
                                       <PopoverTrigger>
                                         <Box
                                           as="button"
-                                          onClick={(event) => event.stopPropagation()} // Prevents card click
+                                          onClick={(event: React.MouseEvent<HTMLButtonElement>) => event.stopPropagation()} // Prevents card click
                                         >
                                           <GrTooltip
                                             style={{
@@ -471,7 +510,7 @@ const Page: React.FC = () => {
                                         </Box>
                                       </PopoverTrigger>
                                       <PopoverContent
-                                        onClick={(event) => event.stopPropagation()}
+                                        onClick={(event: React.MouseEvent<HTMLButtonElement>) => event.stopPropagation()}
                                         bg="gray.100"
                                         boxShadow="lg"
                                         borderRadius="md"
@@ -485,8 +524,13 @@ const Page: React.FC = () => {
                                           {bucketComments?.[bucketName]?.length > 0 ? (
                                             <Box display="flex" flexDirection="column" gap={2}>
                                               {bucketComments[bucketName].map((comment, index) => (
-                                                <Box key={index} fontSize="sm" color="black">
-                                                  <strong>{index + 1}.</strong> {comment.text}
+                                                <Box key={index}>
+                                                  <Box fontSize="sm" color="black">
+                                                    <strong>{index + 1}.</strong> {comment.text}
+                                                  </Box>
+                                                  <Box fontSize="xs" color="gray.600">
+                                                    {new Date(comment["time-stamp"]).toLocaleString()}
+                                                  </Box>
                                                 </Box>
                                               ))}
                                             </Box>
@@ -495,6 +539,7 @@ const Page: React.FC = () => {
                                               No comments available
                                             </Box>
                                           )}
+
                                         </PopoverBody>
                                       </PopoverContent>
                                     </Popover>
@@ -556,3 +601,4 @@ const Page: React.FC = () => {
 };
 
 export default Page;
+
