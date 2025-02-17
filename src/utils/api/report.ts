@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const url = 'http://192.168.1.160:8000';
+// const url = 'http://192.168.1.160:8000';
+const url = 'http://localhost:8000';
 
 // ================================= Get columnwise record data =================================
 export const getDataView = async (
