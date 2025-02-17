@@ -12,6 +12,7 @@ import {
   Popover,
   PopoverArrow,
   PopoverBody,
+  PopoverCloseButton,
   PopoverContent,
   PopoverTrigger,
   SimpleGrid,
@@ -29,58 +30,74 @@ import {
   useColorMode,
 } from '@chakra-ui/react';
 import { useQuery } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
-import { FaInfoCircle } from 'react-icons/fa';
+import { useEffect, useRef, useState } from 'react';
+import { FaCheckCircle, FaInfoCircle } from 'react-icons/fa';
 import { GrTooltip } from 'react-icons/gr';
-import {
-  fetchBackendData,
-  getColumnwiseComments,
-  getCommentCount,
-} from 'utils/api/report';
+import { MdDownload } from 'react-icons/md';
+import { fetchBucketComments, fetchBucketData } from 'utils/api/report';
 import ShowBucketColumns from './ShowBucketColumns';
 
 // Define the type for a column entry
 type Column = {
+  type: string;
+  null_count: number;
   column_name: string;
   not_null_count: number;
-  null_count: number;
 };
 
 // Define the type for a bucket
 type Bucket = {
   columns: Column[];
-  accuracy: number | string; // Accuracy can be a number or a string("Full", "Empty", "NaN")
-  common_rows: number;
-  unique_rows: number;
-  pivot_columns: string[];
+  Pivot_Columns: string[];
+  Common_Null_Count: number;
+  Uncommon_Null_Count: number;
+  Column_Inter_Dependency: string | number; // Updated to accept both string and number
 };
 
 // Define the response type for the backend data
 type BackendDataResponse = {
-  buckets: Record<string, Bucket>; // Object where keys are bucket names
-  total_buckets: number;
-  total_rows: number;
+  buckets: Record<string, Bucket>;
 };
 
+type BucketComment = {
+  flag: string;
+  text: string;
+  'time-stamp': string;
+};
+
+type BucketCommentResponse = Record<
+  string,
+  {
+    columns: string[];
+    final_flag: boolean;
+    bucket_comments: BucketComment[];
+    bucket_comment_count: number;
+  }
+>;
+
 // ============================== Table Names ==============================
-const seller_table = 'amazon_seller_5lakh';
+// tbl_amazonsellerdetails_ia
+const seller_table = 'kevin_testing';
 const product_details = 'ddmapp_amazonproductdetailsnew_data_1028';
 const product_list = 'ddmapp_amazonproductlist_data_1028';
 
 const tableName: string = seller_table;
 
 // ============================ Table Component ============================
-function showTable(columns: { column_name: string; null_count: number }[]) {
+function showTable(
+  columns: { column_name: string; null_count: number }[],
+  Pivot_Columns: string[],
+) {
   const { colorMode } = useColorMode();
   return (
     <TableContainer>
       <Table variant="simple" size="sm">
         <Thead>
           <Tr>
-            <Th sx={{ color: colorMode === 'light' ? 'white' : 'black' }}>
+            <Th sx={{ color: colorMode === 'light' ? 'black' : 'white' }}>
               Column
             </Th>
-            <Th sx={{ color: colorMode === 'light' ? 'white' : 'black' }}>
+            <Th sx={{ color: colorMode === 'light' ? 'black' : 'white' }}>
               Null Count
             </Th>
           </Tr>
@@ -88,9 +105,33 @@ function showTable(columns: { column_name: string; null_count: number }[]) {
         <Tbody>
           {columns?.map((column, index) => (
             <Tr key={index}>
-              <Td color="black.900">{column.column_name}</Td>
+              <Td
+                color={
+                  Pivot_Columns.includes(column.column_name)
+                    ? 'red.500'
+                    : colorMode === 'light'
+                    ? 'black'
+                    : 'white'
+                }
+              >
+                {Pivot_Columns.includes(column.column_name) ? (
+                  <Tooltip
+                    label="This column is inversely related to others"
+                    aria-label="Pivot column tooltip"
+                    placement="top"
+                    hasArrow
+                  >
+                    <Box as="span" cursor="pointer">
+                      {column.column_name}
+                    </Box>
+                  </Tooltip>
+                ) : (
+                  column.column_name
+                )}
+              </Td>
               <Td textAlign="right">
-                {column.null_count ? `${column.null_count}` : 'No null'}
+                {column.null_count ? `${column.null_count}` : 'No null'}{' '}
+                {/* Fixed template literal */}
               </Td>
             </Tr>
           ))}
@@ -99,9 +140,8 @@ function showTable(columns: { column_name: string; null_count: number }[]) {
     </TableContainer>
   );
 }
-
 // ========================= Add the small card component at the top right =========================
-const AccuracyInfoCard: React.FC = () => {
+const Column_Inter_DependencyInfoCard: React.FC = () => {
   const { colorMode } = useColorMode();
   return (
     <Card
@@ -117,7 +157,7 @@ const AccuracyInfoCard: React.FC = () => {
       borderColor={colorMode === 'light' ? 'blue.300' : 'blue.500'} // Highlight border
     >
       <Heading size="md" color="blue.600" textAlign="left" marginY="1">
-        Accuracy Values
+        Column Inter-Dependency Values
       </Heading>
       <Box>
         <Text
@@ -146,48 +186,24 @@ const Page: React.FC = () => {
     { column_name: string; null_count: number }[] | null
   >(null);
   const [selectedBucket, setSelectedBucket] = useState<string | null>(null);
+  const [placement, setPlacement] = useState<'right-start' | 'left-start'>(
+    'right-start',
+  );
+  const popoverRef = useRef<HTMLDivElement | null>(null);
 
-  // Fetch backend data when taskId is set
+  // Fetch bucket data when taskId is set
   const { data, isLoading, error } = useQuery<BackendDataResponse>({
     queryKey: ['backendData', tableName, taskId],
     queryFn: () =>
-      fetchBackendData(tableName, taskId) as Promise<BackendDataResponse>,
+      fetchBucketData(tableName, taskId) as Promise<BackendDataResponse>,
     enabled: !!tableName && !!taskId, // Fetch only when both are available
   });
 
-  // Fetch all comment counts for buckets
-  const { data: commentCounts } = useQuery({
-    queryKey: ['bucketCommentCounts', taskId, tableName],
-    queryFn: async () => {
-      if (!data?.buckets || !taskId) return {};
-      const counts: Record<string, number> = {};
-      for (const bucketName of Object.keys(data.buckets)) {
-        const count = await getCommentCount(tableName, taskId, bucketName);
-        console.log('COUNTSSS: ', count);
-        counts[bucketName] = count;
-      }
-      return counts;
-    },
-    enabled: !!taskId && !!tableName && !!data?.buckets,
-  });
-
-  // Fetch all comments for buckets
-  const { data: bucketComments } = useQuery({
-    queryKey: ['bucketComments', taskId, tableName],
-    queryFn: async () => {
-      if (!taskId || !data?.buckets) return {};
-      const comments: Record<string, any[]> = {};
-      for (const bucketName of Object.keys(data.buckets)) {
-        const bucketData = await getColumnwiseComments(
-          tableName,
-          taskId,
-          bucketName,
-        );
-        comments[bucketName] = bucketData[0]?.comment_buckets || [];
-      }
-      return comments;
-    },
-    enabled: !!taskId && !!data?.buckets,
+  // Fetch bucket comments when taskId is set
+  const { data: bucketComment } = useQuery<BucketCommentResponse>({
+    queryKey: ['bucketComments', tableName, taskId],
+    queryFn: () => fetchBucketComments(tableName, taskId),
+    enabled: !!tableName && !!taskId, // Fetch only when both are available
   });
 
   const handleTaskIdKeyPress = () => {
@@ -199,9 +215,11 @@ const Page: React.FC = () => {
     }
   };
 
+  // Update the `handleCardClick` method to pass the Pivot_Columns
   const handleCardClick = (
     bucketName: string,
     columns: { column_name: string; null_count: number }[],
+    Pivot_Columns: string[], // Make sure pivot columns are passed
   ) => {
     setSelectedColumns(columns);
     setSelectedBucket(bucketName);
@@ -215,22 +233,68 @@ const Page: React.FC = () => {
     return Array.from({ length: 6 }).map((_, index) => (
       <Card
         key={index}
-        w="300px"
+        w="370px" // Match the card width
         h="auto"
-        p={5}
+        p={4} // Adjust padding to match the card
         borderRadius="lg"
         boxShadow="lg"
       >
-        <Skeleton height="40px" mb={4} />
-        <SkeletonText mt="4" noOfLines={4} spacing="4" />
+        <Skeleton height="40px" mb={4} /> {/* Skeleton for the title */}
+        <SkeletonText mt="4" noOfLines={4} spacing="4" />{' '}
+        {/* Skeleton for the content */}
       </Card>
     ));
   };
 
+  const handleDownload = async (bucket: string) => {
+    try {
+      const response = await fetch(
+        `http://localhost:8000/${tableName}/task_id/${taskId}/download-sample/${bucket}/`,
+        {
+          method: 'GET',
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to download file');
+      }
+
+      // Convert response to a Blob
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      // Create a temporary anchor element to trigger download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sample_data_${tableName}_${taskId}_${bucket}.csv`;
+      document.body.appendChild(a);
+      a.click();
+
+      // Cleanup
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading file:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (popoverRef.current) {
+      const popoverRect = popoverRef.current.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+
+      // If popover is overflowing on the right, move it to the left
+      if (popoverRect.right > viewportWidth) {
+        setPlacement('left-start');
+      } else {
+        setPlacement('right-start');
+      }
+    }
+  }, []);
   return (
     <Box p={6}>
-      {/* Accuracy Info Card */}
-      <AccuracyInfoCard />
+      {/* Column_Inter_Dependency Info Card */}
+      <Column_Inter_DependencyInfoCard />
 
       {/* =================================== Table-Name =================================== */}
       <Box mb={6}>
@@ -309,158 +373,290 @@ const Page: React.FC = () => {
             Error fetching data
           </Box>
         ) : (
-          <SimpleGrid minChildWidth="300px" spacing={5} justifyContent="center">
-            {data?.buckets &&
-              Object.entries(data.buckets).map(
+          <SimpleGrid
+            columns={{ base: 1, sm: 2, md: 3, lg: 4 }} // Ensures responsiveness
+            spacing={6} // Provides a fixed gap between cards
+            minChildWidth="370px" // Ensures cards don't shrink too much
+            justifyContent="center"
+            alignItems="stretch"
+            display="grid"
+            gridTemplateColumns="repeat(auto-fit, minmax(370px, 1fr))" // More flexible for responsiveness
+          >
+            {data &&
+              Object.entries(data).map(
                 ([
                   bucketName,
-                  { columns, accuracy, common_rows, unique_rows },
-                ]) => (
-                  <Card
-                    key={bucketName}
-                    w="340px"
-                    h="auto"
-                    p={4}
-                    borderRadius="lg"
-                    boxShadow="lg"
-                    bg={colorMode === 'light' ? 'white' : 'gray.800'}
-                    transition="transform 0.3s ease, box-shadow 0.3s ease"
-                    _hover={{
-                      transform: 'scale(1.05)',
-                      boxShadow: '0px 0px 15px rgba(0, 120, 255, 0.4)',
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => handleCardClick(bucketName, columns)}
-                  >
-                    <CardHeader pb={3} textAlign="center">
-                      <Heading size="md" color="blue.600">
-                        {bucketName}
-                      </Heading>
+                  {
+                    columns,
+                    Column_Inter_Dependency,
+                    Common_Null_Count,
+                    Uncommon_Null_Count,
+                  },
+                ]) => {
+                  // Extract comment counts and bucket comments
+                  const commentCounts = bucketComment
+                    ? Object.fromEntries(
+                        Object.entries(bucketComment).map(
+                          ([name, bucketData]) => [
+                            name,
+                            bucketData.bucket_comment_count || 0,
+                          ],
+                        ),
+                      )
+                    : {};
 
-                      <Tooltip
-                        label={showTable(columns)}
-                        placement="right"
-                        fontSize="md"
-                      >
+                  const bucketComments = bucketComment
+                    ? Object.fromEntries(
+                        Object.entries(bucketComment).map(
+                          ([name, bucketData]) => [
+                            name,
+                            bucketData.bucket_comments || [],
+                          ],
+                        ),
+                      )
+                    : {};
+
+                  return (
+                    <Card
+                      key={bucketName}
+                      w="370px"
+                      h="auto"
+                      p={3}
+                      borderRadius="lg"
+                      boxShadow="lg"
+                      bg={colorMode === 'light' ? 'white' : 'gray.800'}
+                      transition="transform 0.3s ease, box-shadow 0.3s ease"
+                      _hover={{
+                        boxShadow: '0px 0px 15px rgba(0, 120, 255, 0.4)',
+                        cursor: 'pointer',
+                      }}
+                      onClick={() =>
+                        handleCardClick(
+                          bucketName,
+                          columns,
+                          data[bucketName]?.Pivot_Columns || [],
+                        )
+                      } // Pass Pivot_Columns here
+                    >
+                      <CardHeader pb={3} textAlign="center">
+                        <Heading
+                          size="md"
+                          color="blue.600"
+                          display="inline-flex"
+                          alignItems="center"
+                        >
+                          {bucketName}
+                          {Column_Inter_Dependency === 'Full' && (
+                            <FaCheckCircle
+                              color="#90EE90"
+                              style={{ marginLeft: '5px' }}
+                            />
+                          )}
+                        </Heading>
+
                         <Box
                           position="absolute"
                           top={2}
                           right={2}
                           fontSize="lg"
+                          cursor="pointer"
                         >
-                          <FaInfoCircle />
+                          <Popover placement={placement} trigger="click">
+                            <PopoverTrigger>
+                              <Box onClick={(event) => event.stopPropagation()}>
+                                {' '}
+                                {/* Prevents card click */}
+                                <FaInfoCircle />
+                              </Box>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              ref={popoverRef}
+                              maxH="300px"
+                              overflowY="auto" // Enables vertical scrolling
+                              overflowX="hidden" // Disables horizontal scrolling
+                              boxShadow="lg"
+                              borderRadius="md"
+                              p={3}
+                              onClick={(
+                                event: React.MouseEvent<HTMLButtonElement>,
+                              ) => event.stopPropagation()} // Prevents card click event
+                              width="fit-content" // Ensures it only takes necessary width
+                              minW="200px" // Prevents it from shrinking too much
+                            >
+                              <PopoverArrow />
+                              <PopoverCloseButton />
+                              <PopoverBody whiteSpace="nowrap">
+                                {showTable(
+                                  columns,
+                                  data[bucketName]?.Pivot_Columns || [],
+                                )}{' '}
+                                {/* Pass Pivot_Columns here */}
+                              </PopoverBody>
+                            </PopoverContent>
+                          </Popover>
                         </Box>
-                      </Tooltip>
 
-                      <TableContainer mt={3}>
-                        <Table variant="simple" size="sm">
-                          <Tbody>
-                            <Tr>
-                              <Td fontWeight="bold">Accuracy</Td>
-                              <Td textAlign="right">
-                                {typeof accuracy === 'number'
-                                  ? accuracy.toFixed(2)
-                                  : accuracy}
-                              </Td>
-                            </Tr>
-                            <Tr>
-                              <Td fontWeight="bold">Columns</Td>
-                              <Td textAlign="right">{columns.length}</Td>
-                            </Tr>
-                            <Tr>
-                              <Td fontWeight="bold">Common Rows</Td>
-                              <Td textAlign="right">{common_rows ?? 'N/A'}</Td>
-                            </Tr>
-                            <Tr>
-                              <Td fontWeight="bold">Unique Rows</Td>
-                              <Td textAlign="right">{unique_rows ?? 'N/A'}</Td>
-                            </Tr>
-                            <Tr>
-                              <Td fontWeight="bold">Comments</Td>
-                              <Td textAlign="right">
-                                <Box display="flex" gap="10px">
-                                  {/* Comment Count */}
+                        <TableContainer mt={3}>
+                          <Table variant="simple" size="sm">
+                            <Tbody>
+                              <Tr>
+                                <Td fontWeight="bold">
+                                  Column Inter-Dependency
+                                </Td>
+                                <Td textAlign="right">
+                                  {typeof Column_Inter_Dependency === 'number'
+                                    ? parseFloat(
+                                        Column_Inter_Dependency.toFixed(2),
+                                      )
+                                    : Column_Inter_Dependency}
+                                </Td>
+                              </Tr>
+                              <Tr>
+                                <Td fontWeight="bold">Columns</Td>
+                                <Td textAlign="right">{columns.length}</Td>
+                              </Tr>
+                              <Tr>
+                                <Td fontWeight="bold">Common Null Count</Td>
+                                <Td textAlign="right">
+                                  {Common_Null_Count ?? 'N/A'}
+                                </Td>
+                              </Tr>
+                              <Tr>
+                                <Td fontWeight="bold">Uncommon Null Count</Td>
+                                <Td textAlign="right">
+                                  {Uncommon_Null_Count != null &&
+                                  Common_Null_Count != null
+                                    ? Uncommon_Null_Count - Common_Null_Count
+                                    : 'N/A'}
+                                </Td>
+                              </Tr>
+                              <Tr>
+                                <Td fontWeight="bold">Comments</Td>
+                                <Td textAlign="right">
                                   <Box
-                                    display="inline-flex"
-                                    alignItems="center"
-                                    justifyContent="center"
-                                    px="0.4rem"
-                                    py="0.1rem"
-                                    border="1px solid #ccc"
-                                    borderRadius="4px"
-                                    fontSize="0.9rem"
-                                    fontWeight="bold"
-                                    backgroundColor="gray.100"
-                                    color="black"
-                                    minWidth="24px"
-                                    textAlign="center"
+                                    display="flex"
+                                    gap="10px"
+                                    justifyContent="end"
                                   >
-                                    {commentCounts?.[bucketName] || 0}
-                                  </Box>
-
-                                  {/* Comment Popover */}
-                                  <Popover trigger="hover" placement="top">
-                                    <PopoverTrigger>
-                                      <Box as="button">
-                                        <GrTooltip
-                                          style={{
-                                            fontSize: '1.5rem',
-                                            cursor: 'pointer',
-                                            color: '#007bff',
-                                          }}
-                                        />
-                                      </Box>
-                                    </PopoverTrigger>
-                                    <PopoverContent
-                                      bg="gray.100"
-                                      boxShadow="lg"
-                                      borderRadius="md"
-                                      p={3}
+                                    {/* Comment Count */}
+                                    <Box
+                                      display="inline-flex"
+                                      alignItems="center"
+                                      justifyContent="center"
+                                      px="0.4rem"
+                                      py="0.1rem"
+                                      border="1px solid #ccc"
+                                      borderRadius="4px"
+                                      fontSize="0.9rem"
+                                      fontWeight="bold"
+                                      backgroundColor="gray.100"
+                                      color="black"
+                                      minWidth="24px"
+                                      textAlign="center"
                                     >
-                                      <PopoverArrow />
-                                      <PopoverBody textAlign="left">
-                                        {bucketComments?.[bucketName]?.length >
-                                        0 ? (
-                                          <Box
-                                            display="flex"
-                                            flexDirection="column"
-                                            gap={2}
-                                          >
-                                            {bucketComments[bucketName].map(
-                                              (comment, index) => (
-                                                <Box
-                                                  key={index}
-                                                  fontSize="sm"
-                                                  color="black"
-                                                >
-                                                  <strong>{index + 1}.</strong>{' '}
-                                                  {comment.text}
-                                                </Box>
-                                              ),
-                                            )}
-                                          </Box>
-                                        ) : (
-                                          <Box
-                                            textAlign="center"
-                                            fontSize="sm"
-                                            fontWeight="bold"
-                                            color="gray.600"
-                                          >
-                                            No comments available
-                                          </Box>
-                                        )}
-                                      </PopoverBody>
-                                    </PopoverContent>
-                                  </Popover>
-                                </Box>
-                              </Td>
-                            </Tr>
-                          </Tbody>
-                        </Table>
-                      </TableContainer>
-                    </CardHeader>
-                  </Card>
-                ),
+                                      {commentCounts?.[bucketName] || 0}
+                                    </Box>
+
+                                    <Popover trigger="click" placement="top">
+                                      <PopoverTrigger>
+                                        <Box
+                                          as="button"
+                                          onClick={(
+                                            event: React.MouseEvent<HTMLButtonElement>,
+                                          ) => event.stopPropagation()} // Prevents card click
+                                        >
+                                          <GrTooltip
+                                            style={{
+                                              fontSize: '1.5rem',
+                                              cursor: 'pointer',
+                                              color: '#007bff',
+                                            }}
+                                          />
+                                        </Box>
+                                      </PopoverTrigger>
+                                      <PopoverContent
+                                        onClick={(
+                                          event: React.MouseEvent<HTMLButtonElement>,
+                                        ) => event.stopPropagation()}
+                                        bg="gray.100"
+                                        boxShadow="lg"
+                                        borderRadius="md"
+                                        p={3}
+                                        maxH="400px" // Set max height
+                                        overflowY="auto" // Enable vertical scrolling
+                                      >
+                                        <PopoverCloseButton color="black" />
+                                        <PopoverBody textAlign="left">
+                                          {bucketComments?.[bucketName]
+                                            ?.length > 0 ? (
+                                            <Box
+                                              display="flex"
+                                              flexDirection="column"
+                                              gap={2}
+                                            >
+                                              {bucketComments[bucketName].map(
+                                                (comment, index) => (
+                                                  <Box key={index}>
+                                                    <Box
+                                                      fontSize="sm"
+                                                      color="black"
+                                                    >
+                                                      <strong>
+                                                        {index + 1}.
+                                                      </strong>{' '}
+                                                      {comment.text}
+                                                    </Box>
+                                                    <Box
+                                                      fontSize="xs"
+                                                      color="gray.600"
+                                                    >
+                                                      {new Date(
+                                                        comment['time-stamp'],
+                                                      ).toLocaleString()}
+                                                    </Box>
+                                                  </Box>
+                                                ),
+                                              )}
+                                            </Box>
+                                          ) : (
+                                            <Box
+                                              textAlign="center"
+                                              fontSize="sm"
+                                              fontWeight="bold"
+                                              color="gray.600"
+                                            >
+                                              No comments available
+                                            </Box>
+                                          )}
+                                        </PopoverBody>
+                                      </PopoverContent>
+                                    </Popover>
+                                  </Box>
+                                </Td>
+                              </Tr>
+                            </Tbody>
+                          </Table>
+                        </TableContainer>
+                      </CardHeader>
+                      <Box position="absolute" top={2} left={2}>
+                        <Tooltip
+                          label="Click to download 100 samples"
+                          fontSize="sm"
+                          placement="top"
+                        >
+                          <button
+                            onClick={(event) => {
+                              event.stopPropagation(); // Prevent the card's onClick from triggering
+                              handleDownload(bucketName);
+                            }}
+                          >
+                            <MdDownload size="1.5rem" />
+                          </button>
+                        </Tooltip>
+                      </Box>
+                    </Card>
+                  );
+                },
               )}
           </SimpleGrid>
         )

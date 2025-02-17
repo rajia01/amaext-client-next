@@ -6,6 +6,7 @@ import {
   Popover,
   PopoverArrow,
   PopoverBody,
+  PopoverCloseButton,
   PopoverContent,
   PopoverTrigger,
   Table,
@@ -23,8 +24,7 @@ import { FaEye } from 'react-icons/fa';
 import { GrTooltip } from 'react-icons/gr';
 import {
   fetchPaginatedData,
-  getColumnwiseComments,
-  getCommentCount,
+  fetchColumnComments
 } from 'utils/api/report';
 import NullRecords from './NullRecords';
 
@@ -40,6 +40,23 @@ interface ColumnCountProps {
   selectedColumns: { column_name: string; null_count: number }[];
   selectedBucket: string;
 }
+
+interface ColumnComments {
+  flag: number;
+  text: string;
+  'time-stamp': string;
+}
+
+interface ColumnData {
+  column_comments: ColumnComments[];
+  column_comment_count: number;
+}
+
+interface ApiResponse {
+  [bucketName: string]: ColumnData;
+}
+
+
 
 // ========================================== ShowBucketColumns Component ==========================================
 
@@ -78,45 +95,34 @@ const ShowBucketColumns: React.FC<ColumnCountProps> = ({
       enabled: !!taskId && !!tableName && !!selectedBucket,
     });
 
-  // Fetch column-wise comment counts
-  const { data: columnCommentCounts } = useQuery({
-    queryKey: ['columnCommentCounts', taskId, tableName, selectedBucket],
-    queryFn: async () => {
-      if (!taskId || !tableName || !selectedBucket) return {};
-      const counts: Record<string, number> = {};
-      for (const column of selectedColumns) {
-        const count = await getCommentCount(
-          tableName,
-          taskId,
-          selectedBucket,
-          column.column_name,
-        );
-        counts[column.column_name] = count;
-      }
-      return counts;
-    },
+
+  // Fetch Column Comments
+  const { data: columnCommentsData, isLoading: isCommentsLoading } = useQuery<ApiResponse>({
+    queryKey: ['columnComments', tableName, taskId, selectedBucket],
+    queryFn: () => fetchColumnComments(tableName, taskId, selectedBucket),
     enabled: !!taskId && !!tableName && !!selectedBucket,
   });
 
-  // Fetch column-wise comments
-  const { data: columnComments } = useQuery({
-    queryKey: ['columnComments', taskId, tableName, selectedBucket],
-    queryFn: async () => {
-      if (!taskId || !tableName || !selectedBucket) return {};
-      const comments: Record<string, any[]> = {};
-      for (const column of selectedColumns) {
-        const columnData = await getColumnwiseComments(
-          tableName,
-          taskId,
-          selectedBucket,
-          column.column_name,
-        );
-        comments[column.column_name] = columnData[0]?.comment_column || []; // 🔹 Corrected data structure access
-      }
-      return comments;
-    },
-    enabled: !!taskId && !!tableName && !!selectedBucket,
-  });
+  console.log({ columnCommentsData })
+
+  // Extract comment count and comments
+  const columnCommentCounts: Record<string, number> = {};
+  const columnComments: Record<string, { text: string; timestamp: string }[]> = {};
+
+  if (columnCommentsData?.data) { // Ensure `data` exists
+    Object.entries(columnCommentsData.data).forEach(([columnName, columnData]) => {
+      columnCommentCounts[columnName] = columnData.column_comment_count || 0;
+      columnComments[columnName] = columnData.column_comments
+        ? columnData.column_comments.map((comment: ColumnComments) => ({
+          text: comment.text,
+          timestamp: comment["time-stamp"], // Extract timestamp
+        }))
+        : []; // Fallback to empty array if undefined
+    });
+  }
+
+
+
 
   useEffect(() => {
     if (paginatedData?.total_count !== undefined) {
@@ -227,36 +233,47 @@ const ShowBucketColumns: React.FC<ColumnCountProps> = ({
                         minWidth="30px"
                         textAlign="center"
                       >
-                        {columnCommentCounts?.[item.column_name] || 0}
+                        {columnCommentCounts[item.column_name] || 0}
                       </Box>
-                      <Popover trigger="hover" placement="top">
+                      <Popover trigger="click" placement="top">
                         <PopoverTrigger>
-                          <Box as="button">
+                          <Box
+                            as="button"
+                            onClick={(event: React.MouseEvent<HTMLButtonElement>) => event.stopPropagation()} // Prevents popover closing on button click
+                          >
                             <GrTooltip
                               style={{
-                                fontSize: '1.8rem',
-                                cursor: 'pointer',
-                                color: '#007bff',
+                                fontSize: "1.5rem",
+                                cursor: "pointer",
+                                color: "#007bff",
                               }}
                             />
                           </Box>
                         </PopoverTrigger>
                         <PopoverContent
+                          onClick={(event: React.MouseEvent<HTMLButtonElement>) => event.stopPropagation()} // Prevents popover closing on content click
                           bg="gray.100"
                           boxShadow="lg"
                           borderRadius="md"
                           p={3}
+                          maxH="400px" // Set max height for content
+                          overflowY="auto" // Enable vertical scrolling if content exceeds max height
                         >
-                          <PopoverArrow />
+                          <PopoverCloseButton color="black" />
                           <PopoverBody textAlign="left">
-                            {columnComments?.[item.column_name]?.length > 0 ? (
-                              columnComments[item.column_name].map(
-                                (comment, i) => (
-                                  <Box key={i} fontSize="sm" color="black">
-                                    <strong>{i + 1}.</strong> {comment.text}
+                            {columnComments[item.column_name]?.length > 0 ? (
+                              <Box display="flex" flexDirection="column" gap={2}>
+                                {columnComments[item.column_name].map((comment, i) => (
+                                  <Box key={i}>
+                                    <Box fontSize="sm" color="black">
+                                      <strong>{i + 1}.</strong> {comment.text}
+                                    </Box>
+                                    <Box fontSize="xs" color="gray.600">
+                                      {new Date(comment.timestamp).toLocaleString()}
+                                    </Box>
                                   </Box>
-                                ),
-                              )
+                                ))}
+                              </Box>
                             ) : (
                               <Box
                                 textAlign="center"

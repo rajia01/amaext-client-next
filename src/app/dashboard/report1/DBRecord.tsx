@@ -10,6 +10,7 @@ import {
   Th,
   Thead,
   Tr,
+  Box
 } from '@chakra-ui/react';
 import { useQuery } from '@tanstack/react-query';
 import NextLink from 'next/link';
@@ -20,13 +21,15 @@ interface DbRecordProps {
   tableName: string;
   taskId: number;
   recordId: string;
+  columnName: string[];
+  bucketName: string;
 }
 
 interface DataItem {
   [key: string]: string | number | null | undefined;
 }
 
-const DbRecord: React.FC<DbRecordProps> = ({ tableName, taskId, recordId }) => {
+const DbRecord: React.FC<DbRecordProps> = ({ tableName, taskId, recordId, bucketName, columnName }) => {
   // console.log('Record ID: ', recordId);
 
   const {
@@ -55,9 +58,18 @@ const DbRecord: React.FC<DbRecordProps> = ({ tableName, taskId, recordId }) => {
           border: '1px solid #ccc',
         }}
       >
-        <Heading as="h3" noOfLines={1} textAlign="center">
-          Loading DB Record for ID: {recordId}
-        </Heading>
+        {/* Breadcrumb Section */}
+        <Box fontSize="1.6rem">
+          {tableName}{' '}
+          <span style={{ color: 'blue', fontSize: '1.8rem' }}>/</span>{' '}
+          {taskId}{' '}
+          <span style={{ color: 'blue', fontSize: '1.8rem' }}>/</span>{' '}
+          {bucketName}{' '}
+          <span style={{ color: 'blue', fontSize: '1.8rem' }}>/</span>{' '}
+          {columnName}{' '}
+          <span style={{ color: 'blue', fontSize: '1.8rem' }}>/</span>{' '}
+          {recordId}{' '}
+        </Box>
         <TableContainer>
           <Table variant="simple">
             <Thead>
@@ -82,9 +94,18 @@ const DbRecord: React.FC<DbRecordProps> = ({ tableName, taskId, recordId }) => {
           border: '1px solid #ccc',
         }}
       >
-        <Heading as="h3" noOfLines={1} textAlign="center">
-          DB Record for ID: {recordId}
-        </Heading>
+        {/* Breadcrumb Section */}
+        <Box fontSize="1.6rem">
+          {tableName}{' '}
+          <span style={{ color: 'blue', fontSize: '1.8rem' }}>/</span>{' '}
+          {taskId}{' '}
+          <span style={{ color: 'blue', fontSize: '1.8rem' }}>/</span>{' '}
+          {bucketName}{' '}
+          <span style={{ color: 'blue', fontSize: '1.8rem' }}>/</span>{' '}
+          {columnName}{' '}
+          <span style={{ color: 'blue', fontSize: '1.8rem' }}>/</span>{' '}
+          {recordId}{' '}
+        </Box>
         <TableContainer>
           <Table variant="simple">
             <Thead>
