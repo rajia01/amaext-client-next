@@ -37,43 +37,10 @@ import { MdDownload } from 'react-icons/md';
 import { fetchBucketComments, fetchBucketData } from 'utils/api/report';
 import ShowBucketColumns from './ShowBucketColumns';
 
-// Define the type for a column entry
-type Column = {
-  type: string;
-  null_count: number;
-  column_name: string;
-  not_null_count: number;
-};
-
-// Define the type for a bucket
-type Bucket = {
-  columns: Column[];
-  Pivot_Columns: string[];
-  Common_Null_Count: number;
-  Uncommon_Null_Count: number;
-  Column_Inter_Dependency: string | number; // Updated to accept both string and number
-};
-
-// Define the response type for the backend data
-type BackendDataResponse = {
-  buckets: Record<string, Bucket>;
-};
-
-type BucketComment = {
-  flag: string;
-  text: string;
-  'time-stamp': string;
-};
-
-type BucketCommentResponse = Record<
-  string,
-  {
-    columns: string[];
-    final_flag: boolean;
-    bucket_comments: BucketComment[];
-    bucket_comment_count: number;
-  }
->;
+import {
+  BackendDataResponse,
+  BucketCommentResponse,
+} from '../../../types/report';
 
 // ============================== Table Names ==============================
 // tbl_amazonsellerdetails_ia
@@ -433,7 +400,7 @@ const Page: React.FC = () => {
                       onClick={() =>
                         handleCardClick(
                           bucketName,
-                          columns,
+                          data[bucketName]?.columns || [],
                           data[bucketName]?.Pivot_Columns || [],
                         )
                       } // Pass Pivot_Columns here
@@ -505,9 +472,13 @@ const Page: React.FC = () => {
                                 </Td>
                                 <Td textAlign="right">
                                   {typeof Column_Inter_Dependency === 'number'
-                                    ? parseFloat(
-                                        Column_Inter_Dependency.toFixed(2),
+                                    ? Column_Inter_Dependency.toFixed(2)
+                                    : !isNaN(
+                                        parseFloat(Column_Inter_Dependency),
                                       )
+                                    ? parseFloat(
+                                        Column_Inter_Dependency,
+                                      ).toFixed(2)
                                     : Column_Inter_Dependency}
                                 </Td>
                               </Tr>
@@ -524,10 +495,9 @@ const Page: React.FC = () => {
                               <Tr>
                                 <Td fontWeight="bold">Uncommon Null Count</Td>
                                 <Td textAlign="right">
-                                  {Uncommon_Null_Count != null &&
-                                  Common_Null_Count != null
-                                    ? Uncommon_Null_Count - Common_Null_Count
-                                    : 'N/A'}
+                                  {Uncommon_Null_Count >= 0
+                                    ? Uncommon_Null_Count
+                                    : 'neg'}
                                 </Td>
                               </Tr>
                               <Tr>
