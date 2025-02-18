@@ -133,6 +133,7 @@ export const fetchBucketData = async (tableName: string, taskId: number) => {
 
   try {
     const { data } = await axios.get(`${url}/${tableName}/task_id/${taskId}/`);
+    console.log(data);
     return data;
   } catch (error) {
     console.error('Error fetching backend data:', error);

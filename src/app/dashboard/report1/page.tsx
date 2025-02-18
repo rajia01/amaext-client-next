@@ -39,6 +39,7 @@ import ShowBucketColumns from './ShowBucketColumns';
 
 import {
   BackendDataResponse,
+  Column,
   BucketCommentResponse,
 } from '../../../types/report';
 
@@ -77,8 +78,8 @@ function showTable(
                   Pivot_Columns.includes(column.column_name)
                     ? 'red.500'
                     : colorMode === 'light'
-                    ? 'black'
-                    : 'white'
+                      ? 'black'
+                      : 'white'
                 }
               >
                 {Pivot_Columns.includes(column.column_name) ? (
@@ -113,7 +114,7 @@ const Column_Inter_DependencyInfoCard: React.FC = () => {
   return (
     <Card
       position="absolute"
-      top="12%"
+      top="20%"
       right="4.5%"
       w="-moz-fit-content"
       p={4}
@@ -213,31 +214,46 @@ const Page: React.FC = () => {
     ));
   };
 
-  const handleDownload = async (bucket: string) => {
+  const handleDownload = async (tableName: string, taskId: number, bucket: string, columns: Column[]): Promise<void> => {
     try {
-      const response = await fetch(
-        `http://localhost:8000/${tableName}/task_id/${taskId}/download-sample/${bucket}/`,
-        {
-          method: 'GET',
+      // Check the value of selectedColumns before using it
+      console.log('Selected Columns:', columns);
+
+      // Ensure selectedColumns is properly initialized
+      if (!columns || !Array.isArray(columns)) {
+        throw new Error('selectedColumns is null or not an array');
+      }
+
+      // Extract only column names from selectedColumns
+      const queryParams = columns
+        .map((col: { column_name: string }) => `columns=${encodeURIComponent(col.column_name)}`)
+        .join('&');
+
+      console.log('Query Parameters:', queryParams); // Log the query parameters being sent to the backend
+
+      const apiUrl = `http://localhost:8000/${tableName}/task_id/${taskId}/download-sample/${bucket}/?${queryParams}`;
+
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': '*/*',
         },
-      );
+      });
 
       if (!response.ok) {
         throw new Error('Failed to download file');
       }
 
-      // Convert response to a Blob
+      // Convert response to a Blob and initiate file download
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
 
-      // Create a temporary anchor element to trigger download
       const a = document.createElement('a');
       a.href = url;
       a.download = `sample_data_${tableName}_${taskId}_${bucket}.csv`;
       document.body.appendChild(a);
       a.click();
 
-      // Cleanup
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     } catch (error) {
@@ -258,10 +274,13 @@ const Page: React.FC = () => {
       }
     }
   }, []);
+
   return (
-    <Box p={6}>
+    <Box position="relative" p={6}>
       {/* Column_Inter_Dependency Info Card */}
-      <Column_Inter_DependencyInfoCard />
+      <Box position="absolute" top={0} left={0} right={0} zIndex={10}>
+        <Column_Inter_DependencyInfoCard />
+      </Box>
 
       {/* =================================== Table-Name =================================== */}
       <Box mb={6}>
@@ -339,15 +358,16 @@ const Page: React.FC = () => {
           >
             Error fetching data
           </Box>
-        ) : (
+        ) : (<Box width="100%" height="100%" overflowX="hidden" overflowY="hidden">
           <SimpleGrid
-            columns={{ base: 1, sm: 2, md: 3, lg: 4 }} // Ensures responsiveness
-            spacing={6} // Provides a fixed gap between cards
-            minChildWidth="370px" // Ensures cards don't shrink too much
+            columns={{ base: 1, sm: 2, md: 3, lg: 4 }}
+            spacing={6}
+            minChildWidth="370px"
             justifyContent="center"
             alignItems="stretch"
             display="grid"
-            gridTemplateColumns="repeat(auto-fit, minmax(370px, 1fr))" // More flexible for responsiveness
+            mt="80px"
+            gridTemplateColumns="repeat(auto-fit, minmax(370px, 1fr))"
           >
             {data &&
               Object.entries(data).map(
@@ -363,24 +383,24 @@ const Page: React.FC = () => {
                   // Extract comment counts and bucket comments
                   const commentCounts = bucketComment
                     ? Object.fromEntries(
-                        Object.entries(bucketComment).map(
-                          ([name, bucketData]) => [
-                            name,
-                            bucketData.bucket_comment_count || 0,
-                          ],
-                        ),
-                      )
+                      Object.entries(bucketComment).map(
+                        ([name, bucketData]) => [
+                          name,
+                          bucketData.bucket_comment_count || 0,
+                        ],
+                      ),
+                    )
                     : {};
 
                   const bucketComments = bucketComment
                     ? Object.fromEntries(
-                        Object.entries(bucketComment).map(
-                          ([name, bucketData]) => [
-                            name,
-                            bucketData.bucket_comments || [],
-                          ],
-                        ),
-                      )
+                      Object.entries(bucketComment).map(
+                        ([name, bucketData]) => [
+                          name,
+                          bucketData.bucket_comments || [],
+                        ],
+                      ),
+                    )
                     : {};
 
                   return (
@@ -471,15 +491,19 @@ const Page: React.FC = () => {
                                   Column Inter-Dependency
                                 </Td>
                                 <Td textAlign="right">
-                                  {typeof Column_Inter_Dependency === 'number'
-                                    ? Column_Inter_Dependency.toFixed(2)
-                                    : !isNaN(
-                                        parseFloat(Column_Inter_Dependency),
-                                      )
-                                    ? parseFloat(
-                                        Column_Inter_Dependency,
-                                      ).toFixed(2)
-                                    : Column_Inter_Dependency}
+                                  {typeof Column_Inter_Dependency === 'string' ? (
+                                    // Check if the string can be parsed as a number
+                                    !isNaN(parseFloat(Column_Inter_Dependency)) ? (
+                                      // If it's a number (as string), truncate to two decimals
+                                      (parseFloat(Column_Inter_Dependency).toString().slice(0, Column_Inter_Dependency.indexOf('.') + 3)) + "%"  // Truncate after two decimal places
+                                    ) : (
+                                      // If it's not a number, display it as is (e.g., "Full", "Empty")
+                                      Column_Inter_Dependency
+                                    )
+                                  ) : (
+                                    // For numbers, truncate to two decimal places
+                                    (parseFloat(Column_Inter_Dependency.toString()).toString().slice(0, Column_Inter_Dependency.toString().indexOf('.') + 3)) + "%"  // Truncate to two decimal places
+                                  )}
                                 </Td>
                               </Tr>
                               <Tr>
@@ -497,7 +521,7 @@ const Page: React.FC = () => {
                                 <Td textAlign="right">
                                   {Uncommon_Null_Count >= 0
                                     ? Uncommon_Null_Count
-                                    : 'neg'}
+                                    : ' '}
                                 </Td>
                               </Tr>
                               <Tr>
@@ -557,44 +581,25 @@ const Page: React.FC = () => {
                                       >
                                         <PopoverCloseButton color="black" />
                                         <PopoverBody textAlign="left">
-                                          {bucketComments?.[bucketName]
-                                            ?.length > 0 ? (
-                                            <Box
-                                              display="flex"
-                                              flexDirection="column"
-                                              gap={2}
-                                            >
-                                              {bucketComments[bucketName].map(
-                                                (comment, index) => (
+                                          {bucketComments?.[bucketName]?.length > 0 ? (
+                                            <Box display="flex" flexDirection="column" gap={2}>
+                                              {bucketComments[bucketName]
+                                                .filter((comment) => comment && comment.text) // Ensure comment is not null/undefined
+                                                .map((comment, index) => (
                                                   <Box key={index}>
-                                                    <Box
-                                                      fontSize="sm"
-                                                      color="black"
-                                                    >
-                                                      <strong>
-                                                        {index + 1}.
-                                                      </strong>{' '}
-                                                      {comment.text}
+                                                    <Box fontSize="sm" color="black">
+                                                      <strong>{index + 1}.</strong> {comment?.text || 'No text available'}
                                                     </Box>
-                                                    <Box
-                                                      fontSize="xs"
-                                                      color="gray.600"
-                                                    >
-                                                      {new Date(
-                                                        comment['time-stamp'],
-                                                      ).toLocaleString()}
+                                                    <Box fontSize="xs" color="gray.600">
+                                                      {comment?.['time-stamp']
+                                                        ? new Date(comment['time-stamp']).toLocaleString()
+                                                        : 'No timestamp'}
                                                     </Box>
                                                   </Box>
-                                                ),
-                                              )}
+                                                ))}
                                             </Box>
                                           ) : (
-                                            <Box
-                                              textAlign="center"
-                                              fontSize="sm"
-                                              fontWeight="bold"
-                                              color="gray.600"
-                                            >
+                                            <Box textAlign="center" fontSize="sm" fontWeight="bold" color="gray.600">
                                               No comments available
                                             </Box>
                                           )}
@@ -614,14 +619,19 @@ const Page: React.FC = () => {
                           fontSize="sm"
                           placement="top"
                         >
-                          <button
-                            onClick={(event) => {
-                              event.stopPropagation(); // Prevent the card's onClick from triggering
-                              handleDownload(bucketName);
-                            }}
-                          >
-                            <MdDownload size="1.5rem" />
-                          </button>
+                          {/* Only render the button if Common_Null_Count is greater than 0 */}
+                          {Common_Null_Count > 0 && (
+                            <button
+                              onClick={(event) => {
+                                event.stopPropagation(); // Prevent the card's onClick from triggering
+
+                                // Handle download if Common_Null_Count > 0
+                                handleDownload(tableName, taskId, bucketName, columns);
+                              }}
+                            >
+                              <MdDownload size="1.5rem" />
+                            </button>
+                          )}
                         </Tooltip>
                       </Box>
                     </Card>
@@ -629,6 +639,7 @@ const Page: React.FC = () => {
                 },
               )}
           </SimpleGrid>
+        </Box>
         )
       ) : (
         <Box
@@ -645,7 +656,7 @@ const Page: React.FC = () => {
       {/* ======================== Display ShowBucketColumns Component if Task ID is set ======================== */}
 
       {showBucketColumns && taskId && selectedColumns && (
-        <Box ref={columnCountRef} mt={10}>
+        <Box ref={columnCountRef} mt={16}>
           <ShowBucketColumns
             taskId={taskId}
             tableName={tableName}
