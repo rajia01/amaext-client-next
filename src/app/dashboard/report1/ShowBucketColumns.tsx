@@ -101,6 +101,7 @@ const ShowBucketColumns: React.FC<ColumnCountProps> = ({
     queryKey: ['columnComments', tableName, taskId, selectedBucket],
     queryFn: () => fetchColumnComments(tableName, taskId, selectedBucket),
     enabled: !!taskId && !!tableName && !!selectedBucket,
+    refetchInterval: 1000
   });
 
   console.log({ columnCommentsData })

@@ -12,6 +12,7 @@ import {
   Th,
   Thead,
   Tr,
+  useToast,
   useColorMode,
 } from '@chakra-ui/react';
 import { useQuery } from '@tanstack/react-query';
@@ -52,6 +53,9 @@ const NullRecords: React.FC<NullRecordsProps> = ({
   const [rowsPerPage] = useState(7);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const { colorMode } = useColorMode();
+  const [toastShown, setToastShown] = useState(false); // Prevent repeated toasts
+  const toast = useToast();
+  const maxLength = 150;
 
   const {
     data: records,
@@ -65,6 +69,7 @@ const NullRecords: React.FC<NullRecordsProps> = ({
   });
 
   // **************************************************************************************
+
   const handleCommentSubmit = () => {
     if (comment.trim()) {
       console.log(`Submitting comment: ${comment}`);
@@ -81,10 +86,29 @@ const NullRecords: React.FC<NullRecordsProps> = ({
         isSingleColumn ? columnName[0] : undefined,
       );
 
+      // Show success toast after submission
+      toast({
+        title: 'Comment Submitted!',
+        description: 'Your comment has been added successfully.',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+
       // Clear input after submission
       setComment('');
+    } else {
+      // Show error toast if comment is empty
+      toast({
+        title: 'Empty Comment',
+        description: 'Please enter a comment before submitting.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
     }
   };
+
 
   // **************************************************************************************
   const handleViewDBRecord = (record_id: string) => {
@@ -120,6 +144,28 @@ const NullRecords: React.FC<NullRecordsProps> = ({
       : `Enter the comment for ${bucketName}`;
   };
 
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+
+    if (inputValue.length >= maxLength) {
+      if (!toastShown) {
+        toast({
+          title: 'Character limit reached!',
+          description: `You can only enter up to ${maxLength} characters.`,
+          status: 'warning',
+          duration: 3000,
+          isClosable: true,
+        });
+        setToastShown(true); // Prevent multiple toasts on each keystroke
+      }
+    } else {
+      setToastShown(false); // Reset when the user deletes characters
+    }
+
+    setComment(inputValue.slice(0, maxLength)); // Ensures max length is respected
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       <div
@@ -145,8 +191,9 @@ const NullRecords: React.FC<NullRecordsProps> = ({
               <input
                 type="text"
                 value={comment}
-                onChange={(e) => setComment(e.target.value)}
+                onChange={handleChange}
                 placeholder={getCommentPlaceholder()}
+                maxLength={maxLength}
                 style={{
                   color: colorMode === 'light' ? 'black' : 'white',
                   padding: '0.75rem',
