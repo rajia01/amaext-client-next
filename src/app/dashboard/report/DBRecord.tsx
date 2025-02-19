@@ -130,7 +130,7 @@ const DbRecord: React.FC<DbRecordProps> = ({
           </Thead>
           <Tbody>
             {isDbLoading ? (
-              getSkeleton(5, 2) // Show skeleton when loading
+              getSkeleton(5, 2)
             ) : isDbSuccess && data ? (
               Object.entries(data).length > 0 ? (
                 Object.entries(data).map(([key, value], idx) => {
