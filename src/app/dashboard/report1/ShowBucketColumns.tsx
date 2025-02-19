@@ -2,6 +2,9 @@
 
 import {
   Box,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
   Button,
   Popover,
   PopoverArrow,
@@ -27,6 +30,7 @@ import {
   fetchColumnComments
 } from 'utils/api/report';
 import NullRecords from './NullRecords';
+import { ChevronRightIcon } from '@chakra-ui/icons';
 
 interface PaginatedData {
   total_count: number;
@@ -101,6 +105,7 @@ const ShowBucketColumns: React.FC<ColumnCountProps> = ({
     queryKey: ['columnComments', tableName, taskId, selectedBucket],
     queryFn: () => fetchColumnComments(tableName, taskId, selectedBucket),
     enabled: !!taskId && !!tableName && !!selectedBucket,
+    refetchInterval: 1000
   });
 
   console.log({ columnCommentsData })
@@ -159,6 +164,7 @@ const ShowBucketColumns: React.FC<ColumnCountProps> = ({
     }, 50);
   };
 
+  // =========================================== Page component ===========================================
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       <div style={{ padding: '1rem', border: '1px solid #ccc' }}>
@@ -170,12 +176,31 @@ const ShowBucketColumns: React.FC<ColumnCountProps> = ({
           p={4}
         >
           {/* Breadcrumb Section */}
-          <Box fontSize="1.6rem">
-            {tableName}{' '}
-            <span style={{ color: 'blue', fontSize: '1.8rem' }}>/</span>{' '}
-            {taskId}{' '}
-            <span style={{ color: 'blue', fontSize: '1.8rem' }}>/</span>{' '}
-            {selectedBucket}
+          <Box
+            fontSize="1.6rem"
+            border="2px solid gray"
+            borderRadius="8px"
+            padding="8px 12px"
+            // background="blue.600"
+            color="white"
+          >
+            <Breadcrumb spacing="8px" separator={<ChevronRightIcon color="white" boxSize={5} />}>
+              <BreadcrumbItem>
+                <BreadcrumbLink fontWeight="bold" color="white">{tableName}</BreadcrumbLink>
+              </BreadcrumbItem>
+
+              {taskId && (
+                <BreadcrumbItem>
+                  <BreadcrumbLink fontWeight="bold" color="white">{taskId}</BreadcrumbLink>
+                </BreadcrumbItem>
+              )}
+
+              {selectedBucket && (
+                <BreadcrumbItem>
+                  <BreadcrumbLink fontWeight="bold" color="white">{selectedBucket}</BreadcrumbLink>
+                </BreadcrumbItem>
+              )}
+            </Breadcrumb>
           </Box>
 
           {/* Button to View All Null Records */}
@@ -184,7 +209,7 @@ const ShowBucketColumns: React.FC<ColumnCountProps> = ({
           </Button>
         </Box>
         <TableContainer>
-          <Table fontSize={18} variant="simple" size="lg">
+          <Table fontSize={18} variant="simple" size="lg" mt={8}>
             <Thead>
               <Tr>
                 <Th>Serial No.</Th>

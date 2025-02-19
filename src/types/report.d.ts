@@ -9,6 +9,7 @@ export type Column = {
 // Define the type for a bucket
 export type Bucket = {
   columns: Column[];
+  Show_Flag: boolean;
   Pivot_Columns: string[];
   Common_Null_Count: number;
   Uncommon_Null_Count: number;

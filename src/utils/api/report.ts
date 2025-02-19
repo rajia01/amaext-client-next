@@ -11,7 +11,7 @@ export const getDataView = async (
 ) => {
   try {
     const response = await axios.get(`${url}/${tableName}/${taskId}/sr/${id}`);
-    console.log('DB Record: ', response.data);
+    // console.log('DB Record: ', response.data);
     return response.data;
     //
   } catch (error) {
@@ -66,9 +66,9 @@ export const fetchPaginatedData = async (
   selectedBucket: string, // Add selected bucket
 ) => {
   try {
-    console.log(
-      `Fetching paginated data for ${tableName}, Task ID: ${taskId}, Page: ${page}, Bucket: ${selectedBucket}`,
-    );
+    // console.log(
+    //   `Fetching paginated data for ${tableName}, Task ID: ${taskId}, Page: ${page}, Bucket: ${selectedBucket}`,
+    // );
 
     const response = await axios.get(`${url}/${tableName}/task_id/${taskId}`, {
       params: { page_no: page, page_per: rowsPerPage },
@@ -120,9 +120,9 @@ export const fetchNullRecords = async (
     },
   });
 
-  console.log(response.data.items);
+  // console.log(response.data.items);
 
-  console.log('Fetched Null Records:', response.data);
+  // console.log('Fetched Null Records:', response.data);
   return response.data;
 };
 
@@ -133,6 +133,7 @@ export const fetchBucketData = async (tableName: string, taskId: number) => {
 
   try {
     const { data } = await axios.get(`${url}/${tableName}/task_id/${taskId}/`);
+    // console.log(data);
     return data;
   } catch (error) {
     console.error('Error fetching backend data:', error);
