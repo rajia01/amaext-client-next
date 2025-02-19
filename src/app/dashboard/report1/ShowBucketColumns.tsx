@@ -1,5 +1,6 @@
 'use client';
 
+import { ChevronRightIcon } from '@chakra-ui/icons';
 import {
   Box,
   Breadcrumb,
@@ -7,7 +8,6 @@ import {
   BreadcrumbLink,
   Button,
   Popover,
-  PopoverArrow,
   PopoverBody,
   PopoverCloseButton,
   PopoverContent,
@@ -25,9 +25,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { FaEye } from 'react-icons/fa';
 import { GrTooltip } from 'react-icons/gr';
-import { fetchPaginatedData, fetchColumnComments } from 'utils/api/report';
+import { fetchColumnComments, fetchPaginatedData } from 'utils/api/report';
 import NullRecords from './NullRecords';
-import { ChevronRightIcon } from '@chakra-ui/icons';
 
 interface PaginatedData {
   total_count: number;
@@ -298,19 +297,28 @@ const ShowBucketColumns: React.FC<ColumnCountProps> = ({
                           <PopoverCloseButton color="black" />
                           <PopoverBody textAlign="left">
                             {columnComments[item.column_name]?.length > 0 ? (
-                              <Box display="flex" flexDirection="column" gap={2}>
-                                {columnComments[item.column_name].map((comment, i) => (
-                                  <Box key={i}>
-                                    <Box
-                                      fontSize="sm"
-                                      color="black"
-                                      maxWidth="100%" // Ensure it respects the parent width
-                                      whiteSpace="normal" // Allow wrapping
-                                      wordBreak="break-word" >
-                                      <strong>{i + 1}.</strong> {comment.text}
-                                    </Box>
-                                    <Box fontSize="xs" color="gray.600">
-                                      {new Date(comment.timestamp).toLocaleString()}
+                              <Box
+                                display="flex"
+                                flexDirection="column"
+                                gap={2}
+                              >
+                                {columnComments[item.column_name].map(
+                                  (comment, i) => (
+                                    <Box key={i}>
+                                      <Box
+                                        fontSize="sm"
+                                        color="black"
+                                        maxWidth="100%" // Ensure it respects the parent width
+                                        whiteSpace="normal" // Allow wrapping
+                                        wordBreak="break-word"
+                                      >
+                                        <strong>{i + 1}.</strong> {comment.text}
+                                      </Box>
+                                      <Box fontSize="xs" color="gray.600">
+                                        {new Date(
+                                          comment.timestamp,
+                                        ).toLocaleString()}
+                                      </Box>
                                     </Box>
                                   ),
                                 )}

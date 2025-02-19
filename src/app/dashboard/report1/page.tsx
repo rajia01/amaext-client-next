@@ -86,8 +86,8 @@ function showTable(
                   Pivot_Columns.includes(column.column_name)
                     ? 'red.500'
                     : colorMode === 'light'
-                      ? 'white'
-                      : 'black'
+                    ? 'white'
+                    : 'black'
                 }
               >
                 {Pivot_Columns.includes(column.column_name) ? (
@@ -206,23 +206,23 @@ const Page: React.FC = () => {
     const newTaskId = Number(inputValue);
     if (!inputValue || isNaN(newTaskId)) {
       toast({
-        title: "Task ID Required",
-        description: "Please enter a valid Task ID before proceeding.",
-        status: "warning",
+        title: 'Task ID Required',
+        description: 'Please enter a valid Task ID before proceeding.',
+        status: 'warning',
         duration: 3000,
         isClosable: true,
       });
       return;
     }
-    
+
     setTaskId(newTaskId);
     setShowBucketColumns(false);
     setLastFetchTimestamp(Date.now());
-    
+
     toast({
-      title: "Task ID Set",
+      title: 'Task ID Set',
       description: `Task ID ${newTaskId} has been successfully set.`,
-      status: "success",
+      status: 'success',
       duration: 1000,
       isClosable: true,
     });
@@ -232,11 +232,28 @@ const Page: React.FC = () => {
     if (event.key === 'Enter') {
       const inputValue = taskIdInputRef.current?.value;
       const newTaskId = Number(inputValue);
-      if (!isNaN(newTaskId)) {
-        setTaskId(newTaskId);
-        setShowBucketColumns(false);
-        setLastFetchTimestamp(Date.now());
+      if (!inputValue || isNaN(newTaskId)) {
+        toast({
+          title: 'Task ID Required',
+          description: 'Please enter a valid Task ID before proceeding.',
+          status: 'warning',
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
       }
+
+      setTaskId(newTaskId);
+      setShowBucketColumns(false);
+      setLastFetchTimestamp(Date.now());
+
+      toast({
+        title: 'Task ID Set',
+        description: `Task ID ${newTaskId} has been successfully set.`,
+        status: 'success',
+        duration: 1000,
+        isClosable: true,
+      });
     }
   };
 
@@ -271,8 +288,8 @@ const Page: React.FC = () => {
       // Show success toast
       toast({
         title: `Flag set to false for ${bucketName}`,
-        description: "The show flag has been successfully updated.",
-        status: "success",
+        description: 'The show flag has been successfully updated.',
+        status: 'success',
         duration: 3000,
         isClosable: true,
       });
@@ -322,7 +339,13 @@ const Page: React.FC = () => {
     ));
   };
 
-  const handleDownload = async (tableName: string, taskId: number, bucket: string, columns: Column[], toast: ReturnType<typeof useToast>): Promise<void> => {
+  const handleDownload = async (
+    tableName: string,
+    taskId: number,
+    bucket: string,
+    columns: Column[],
+    toast: ReturnType<typeof useToast>,
+  ): Promise<void> => {
     try {
       // Ensure selectedColumns is properly initialized
       if (!columns || !Array.isArray(columns)) {
@@ -364,19 +387,19 @@ const Page: React.FC = () => {
       window.URL.revokeObjectURL(url);
 
       toast({
-        title: "Download Successful",
+        title: 'Download Successful',
         description: `The sample file for ${bucket} has been downloaded.`,
-        status: "success",
+        status: 'success',
         duration: 3000,
         isClosable: true,
       });
     } catch (error) {
-      console.error("Error downloading file:", error);
+      console.error('Error downloading file:', error);
 
       toast({
-        title: "Download Failed",
-        description: "Could not download the file. Please try again.",
-        status: "error",
+        title: 'Download Failed',
+        description: 'Could not download the file. Please try again.',
+        status: 'error',
         duration: 3000,
         isClosable: true,
       });
@@ -386,9 +409,10 @@ const Page: React.FC = () => {
   useEffect(() => {
     if (error) {
       toast({
-        title: "Error Fetching Data",
-        description: "There was a problem retrieving the data. Please try again later.",
-        status: "error",
+        title: 'Error Fetching Data',
+        description:
+          'There was a problem retrieving the data. Please try again later.',
+        status: 'error',
         duration: 4000,
         isClosable: true,
       });
@@ -811,6 +835,7 @@ const Page: React.FC = () => {
                                     taskId,
                                     bucketName,
                                     columns,
+                                    toast,
                                   );
                                 }}
                               >
@@ -839,62 +864,57 @@ const Page: React.FC = () => {
                             >
                               <MdDelete size="1.5rem" />
                             </button>
-                          )}
-                        </Tooltip>
-                      </Box>
-                      <Box position="absolute" bottom={2} right={2}>
-                        <Tooltip label="Remove this cluster" fontSize="sm" placement="top">
-                          <button
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setSelectedBucket(bucketName); // Set the selected bucket
-                              setIsOpen(true); // Open the confirmation dialog
-                            }}
-                            style={{ background: "none", border: "none", cursor: "pointer" }}
-                          >
-                            <MdDelete size="1.5rem" />
-                          </button>
-                        </Tooltip>
-                      </Box>
-                      <AlertDialog
-                        isOpen={isOpen}
-                        leastDestructiveRef={cancelRef}
-                        onClose={() => setIsOpen(false)}
-                      >
-                        <AlertDialogContent>
-                          <AlertDialogHeader fontSize="lg" fontWeight="bold">
-                            Confirm Deletion
-                          </AlertDialogHeader>
+                          </Tooltip>
+                        </Box>
+                        <AlertDialog
+                          isOpen={isOpen}
+                          leastDestructiveRef={cancelRef}
+                          onClose={() => setIsOpen(false)}
+                        >
+                          <AlertDialogContent>
+                            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                              Confirm Deletion
+                            </AlertDialogHeader>
 
-                          <AlertDialogBody>
-                            Are you sure you want to delete the cluster `{selectedBucket}` ? Once deleted, it cannot be restored.
-                          </AlertDialogBody>
+                            <AlertDialogBody>
+                              Are you sure you want to delete the cluster `
+                              {selectedBucket}` ? Once deleted, it cannot be
+                              restored.
+                            </AlertDialogBody>
 
-                          <AlertDialogFooter>
-                            <Button ref={cancelRef} onClick={() => setIsOpen(false)}>
-                              Cancel
-                            </Button>
-                            <Button
-                              colorScheme="red"
-                              onClick={() => {
-                                if (selectedBucket) {
-                                  updateShowFlagAPI(tableName, taskId, selectedBucket, toast);
-                                }
-                                setIsOpen(false); // Close the dialog after confirmation
-                              }}
-                              ml={3}
-                            >
-                              Confirm
-                            </Button>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </Card>
-                  );
-                },
-              )}
-          </SimpleGrid>
-        </Box>
+                            <AlertDialogFooter>
+                              <Button
+                                ref={cancelRef}
+                                onClick={() => setIsOpen(false)}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                colorScheme="red"
+                                onClick={() => {
+                                  if (selectedBucket) {
+                                    updateShowFlagAPI(
+                                      tableName,
+                                      taskId,
+                                      selectedBucket,
+                                      toast,
+                                    );
+                                  }
+                                  setIsOpen(false); // Close the dialog after confirmation
+                                }}
+                                ml={3}
+                              >
+                                Confirm
+                              </Button>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </Card>
+                    );
+                  },
+                )}
+            </SimpleGrid>
+          </Box>
         )
       ) : (
         <Box
