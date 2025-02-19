@@ -56,7 +56,7 @@ const seller_table = 'kevin_testing';
 const product_details = 'ddmapp_amazonproductdetailsnew_data_1028';
 const product_list = 'ddmapp_amazonproductlist_data_1028';
 
-const tableName: string = "amazon_seller_5lakh";
+const tableName: string = 'amazon_seller_5lakh';
 
 // ============================ Table Component ============================
 function showTable(
@@ -85,8 +85,8 @@ function showTable(
                   Pivot_Columns.includes(column.column_name)
                     ? 'red.500'
                     : colorMode === 'light'
-                      ? 'black'
-                      : 'white'
+                    ? 'black'
+                    : 'white'
                 }
               >
                 {Pivot_Columns.includes(column.column_name) ? (
@@ -115,7 +115,7 @@ function showTable(
     </TableContainer>
   );
 }
-// ========================= Add the small card component at the top right =========================
+// ====================================== Add the Info Card Component  ======================================
 const Column_Inter_DependencyInfoCard: React.FC = () => {
   const { colorMode } = useColorMode();
   return (
@@ -154,6 +154,7 @@ const Column_Inter_DependencyInfoCard: React.FC = () => {
 const Page: React.FC = () => {
   const { colorMode } = useColorMode();
   const [taskId, setTaskId] = useState<number | null>(null);
+  const [lastFetchTimestamp, setLastFetchTimestamp] = useState<number>(null);
   const [showBucketColumns, setShowBucketColumns] = useState(false);
   const [selectedColumns, setSelectedColumns] = useState<
     { column_name: string; null_count: number }[] | null
@@ -184,7 +185,7 @@ const Page: React.FC = () => {
 
   // Fetch bucket data when taskId is set
   const { data, isLoading, error } = useQuery<BackendDataResponse>({
-    queryKey: ['backendData', tableName, taskId],
+    queryKey: ['backendData', tableName, taskId, lastFetchTimestamp],
     queryFn: () =>
       fetchBucketData(tableName, taskId) as Promise<BackendDataResponse>,
     enabled: !!tableName && !!taskId, // Fetch only when both are available
@@ -204,63 +205,75 @@ const Page: React.FC = () => {
     if (!isNaN(newTaskId)) {
       setTaskId(newTaskId);
       setShowBucketColumns(false);
+      setLastFetchTimestamp(Date.now());
     }
   };
 
-  // ----------------------------------------------------API call to update show_flag-----------------------------------------------------
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      const inputValue = taskIdInputRef.current?.value;
+      const newTaskId = Number(inputValue);
+      if (!isNaN(newTaskId)) {
+        setTaskId(newTaskId);
+        setShowBucketColumns(false);
+        setLastFetchTimestamp(Date.now());
+      }
+    }
+  };
 
+  // update show_flag api call
   const updateShowFlagAPI = async (
     tableName: string,
     taskId: number,
     bucketName: string,
-    toast: any
+    toast: any,
   ) => {
     try {
-      const queryParams = new URLSearchParams({ bucket_name: bucketName }).toString();
+      const queryParams = new URLSearchParams({
+        bucket_name: bucketName,
+      }).toString();
 
       const response = await fetch(
         `http://localhost:8000/${tableName}/${taskId}/update-show-flag/?${queryParams}`,
         {
-          method: "POST",
+          method: 'POST',
           headers: {
-            accept: "application/json",
+            accept: 'application/json',
           },
-        }
+        },
       );
 
       if (!response.ok) {
-        throw new Error("Error updating show flag");
+        throw new Error('Error updating show flag');
       }
 
       const data = await response.json();
-      // console.log(data);
 
       // Show success toast
       toast({
         title: `Flag set to false for ${bucketName}`,
-        description: "The show flag has been successfully updated.",
-        status: "success",
-        duration: 3000, // Duration in milliseconds
+        description: 'The show flag has been successfully updated.',
+        status: 'success',
+        duration: 3000,
         isClosable: true,
-        position: "top-right",
+        position: 'top-right',
       });
 
       return data;
     } catch (error) {
-      console.error("Error:", error);
+      console.error('Error:', error);
 
       // Show error toast if request fails
       toast({
-        title: "Update Failed",
-        description: "Could not update show flag. Please try again.",
-        status: "error",
+        title: 'Update Failed',
+        description: 'Could not update show flag. Please try again.',
+        status: 'error',
         duration: 3000,
         isClosable: true,
-        position: "top-right",
+        position: 'top-right',
       });
     }
   };
-
 
   // Update the `handleCardClick` method to pass the Pivot_Columns
   const handleCardClick = (
@@ -280,24 +293,25 @@ const Page: React.FC = () => {
     return Array.from({ length: 6 }).map((_, index) => (
       <Card
         key={index}
-        w="370px" // Match the card width
+        w="370px"
         h="auto"
-        p={4} // Adjust padding to match the card
+        p={4}
         borderRadius="lg"
         boxShadow="lg"
       >
-        <Skeleton height="40px" mb={4} /> {/* Skeleton for the title */}
-        <SkeletonText mt="4" noOfLines={4} spacing="4" />{' '}
-        {/* Skeleton for the content */}
+        <Skeleton height="40px" mb={4} />
+        <SkeletonText mt="4" noOfLines={4} spacing="4" />
       </Card>
     ));
   };
 
-  const handleDownload = async (tableName: string, taskId: number, bucket: string, columns: Column[]): Promise<void> => {
+  const handleDownload = async (
+    tableName: string,
+    taskId: number,
+    bucket: string,
+    columns: Column[],
+  ): Promise<void> => {
     try {
-      // Check the value of selectedColumns before using it
-      // console.log('Selected Columns:', columns);
-
       // Ensure selectedColumns is properly initialized
       if (!columns || !Array.isArray(columns)) {
         throw new Error('selectedColumns is null or not an array');
@@ -305,17 +319,18 @@ const Page: React.FC = () => {
 
       // Extract only column names from selectedColumns
       const queryParams = columns
-        .map((col: { column_name: string }) => `columns=${encodeURIComponent(col.column_name)}`)
+        .map(
+          (col: { column_name: string }) =>
+            `columns=${encodeURIComponent(col.column_name)}`,
+        )
         .join('&');
-
-      // console.log('Query Parameters:', queryParams); // Log the query parameters being sent to the backend
 
       const apiUrl = `http://localhost:8000/${tableName}/task_id/${taskId}/download-sample/${bucket}/?${queryParams}`;
 
       const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
-          'Accept': '*/*',
+          Accept: '*/*',
         },
       });
 
@@ -341,7 +356,7 @@ const Page: React.FC = () => {
   };
 
   return (
-    <Box position="relative" p={6}>
+    <Box position="relative" p={7} pt={0}>
       {/* Column_Inter_Dependency Info Card */}
       <Box position="absolute" top={0} left={0} right={0} zIndex={10}>
         <Column_Inter_DependencyInfoCard />
@@ -366,7 +381,7 @@ const Page: React.FC = () => {
               case product_list:
                 return 'Amazon Product List';
               default:
-                return 'Unknown Table';
+                return tableName;
             }
           })()}
         </Heading>
@@ -386,6 +401,7 @@ const Page: React.FC = () => {
           <Box display="flex" gap={4}>
             <Input
               ref={taskIdInputRef}
+              onKeyDown={handleKeyDown}
               placeholder="Enter Task ID"
               size="lg"
               width="350px"
@@ -415,352 +431,430 @@ const Page: React.FC = () => {
           </SimpleGrid>
         ) : error ? (
           <Box
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
             textAlign="center"
-            fontSize="lg"
+            fontSize={['xl', '2xl', '3xl']}
             fontWeight="bold"
             color="red.500"
-            mt={6}
+            height={['10vh', '30vh', '50vh']}
+            // border={'1px solid white'}
           >
             Error fetching data
           </Box>
-        ) : (<Box width="100%" height="100%" overflowX="hidden" overflowY="hidden">
-          <SimpleGrid
-            columns={{ base: 1, sm: 2, md: 3, lg: 4 }}
-            spacing={6}
-            minChildWidth="370px"
-            justifyContent="center"
-            alignItems="stretch"
-            display="grid"
-            mt="80px"
-            gridTemplateColumns="repeat(auto-fit, minmax(370px, 1fr))"
-            marginX="20px"
-          >
-            {data &&
-              Object.entries(data).map(
-                ([
-                  bucketName,
-                  {
-                    columns,
-                    Column_Inter_Dependency,
-                    Common_Null_Count,
-                    Uncommon_Null_Count,
-                    Show_Flag
-                  },
-                ]) => {
-                  if (Show_Flag != true) return null;
-                  // Extract comment counts and bucket comments
-                  const commentCounts = bucketComment
-                    ? Object.fromEntries(
-                      Object.entries(bucketComment).map(
-                        ([name, bucketData]) => [
-                          name,
-                          bucketData.bucket_comment_count || 0,
-                        ],
-                      ),
-                    )
-                    : {};
-
-                  const bucketComments = bucketComment
-                    ? Object.fromEntries(
-                      Object.entries(bucketComment).map(
-                        ([name, bucketData]) => [
-                          name,
-                          bucketData.bucket_comments || [],
-                        ],
-                      ),
-                    )
-                    : {};
-
-                  return (
-                    <Card
-                      key={bucketName}
-                      w="370px"
-                      h="auto"
-                      p={3}
-                      borderRadius="lg"
-                      boxShadow="lg"
-                      bg={colorMode === 'light' ? 'white' : 'gray.800'}
-                      transition="transform 0.3s ease, box-shadow 0.3s ease"
-                      _hover={{
-                        boxShadow: '0px 0px 15px rgba(0, 120, 255, 0.4)',
-                        cursor: 'pointer',
-                      }}
-                      onClick={() =>
-                        handleCardClick(
-                          bucketName,
-                          data[bucketName]?.columns || [],
-                          data[bucketName]?.Pivot_Columns || [],
+        ) : (
+          <Box width="100%" height="100%" overflowX="hidden" overflowY="hidden">
+            <SimpleGrid
+              columns={{ base: 1, sm: 2, md: 3, lg: 4 }}
+              spacing={6}
+              minChildWidth="370px"
+              justifyContent="center"
+              alignItems="stretch"
+              display="grid"
+              mt="20px"
+              gridTemplateColumns="repeat(auto-fit, minmax(370px, 1fr))"
+              marginX="20px"
+            >
+              {data &&
+                Object.entries(data).map(
+                  ([
+                    bucketName,
+                    {
+                      columns,
+                      Column_Inter_Dependency,
+                      Common_Null_Count,
+                      Uncommon_Null_Count,
+                      Show_Flag,
+                    },
+                  ]) => {
+                    if (Show_Flag != true) return null;
+                    // Extract comment counts and bucket comments
+                    const commentCounts = bucketComment
+                      ? Object.fromEntries(
+                          Object.entries(bucketComment).map(
+                            ([name, bucketData]) => [
+                              name,
+                              bucketData.bucket_comment_count || 0,
+                            ],
+                          ),
                         )
-                      } // Pass Pivot_Columns here
-                    >
-                      <CardHeader pb={3} textAlign="center">
-                        <Heading
-                          size="md"
-                          color="blue.600"
-                          display="inline-flex"
-                          alignItems="center"
-                        >
-                          {bucketName}
-                          {Column_Inter_Dependency === 'Full' && (
-                            <FaCheckCircle
-                              color="#90EE90"
-                              style={{ marginLeft: '5px' }}
-                            />
-                          )}
-                        </Heading>
+                      : {};
 
-                        <Box
-                          position="absolute"
-                          top={2}
-                          right={2}
-                          fontSize="lg"
-                          cursor="pointer"
-                        >
-                          <Popover placement={placement} trigger="click">
-                            <PopoverTrigger>
-                              <Box onClick={(event) => event.stopPropagation()}>
-                                {' '}
-                                {/* Prevents card click */}
-                                <FaInfoCircle />
-                              </Box>
-                            </PopoverTrigger>
-                            <PopoverContent
-                              ref={popoverRef}
-                              maxH="300px"
-                              overflowY="auto" // Enables vertical scrolling
-                              overflowX="hidden" // Disables horizontal scrolling
-                              boxShadow="lg"
-                              borderRadius="md"
-                              p={3}
-                              onClick={(
-                                event: React.MouseEvent<HTMLButtonElement>,
-                              ) => event.stopPropagation()} // Prevents card click event
-                              width="fit-content" // Ensures it only takes necessary width
-                              minW="200px" // Prevents it from shrinking too much
-                            >
-                              <PopoverArrow />
-                              <PopoverCloseButton />
-                              <PopoverBody whiteSpace="nowrap">
-                                {showTable(
-                                  columns,
-                                  data[bucketName]?.Pivot_Columns || [],
-                                )}{' '}
-                                {/* Pass Pivot_Columns here */}
-                              </PopoverBody>
-                            </PopoverContent>
-                          </Popover>
-                        </Box>
+                    const bucketComments = bucketComment
+                      ? Object.fromEntries(
+                          Object.entries(bucketComment).map(
+                            ([name, bucketData]) => [
+                              name,
+                              bucketData.bucket_comments || [],
+                            ],
+                          ),
+                        )
+                      : {};
 
-                        <TableContainer mt={3}>
-                          <Table variant="simple" size="sm">
-                            <Tbody>
-                              <Tr>
-                                <Td fontWeight="bold">
-                                  Column Inter-Dependency
-                                </Td>
-                                <Td textAlign="right">
-                                  {typeof Column_Inter_Dependency === 'string' ? (
-                                    // Check if the string can be parsed as a number
-                                    !isNaN(parseFloat(Column_Inter_Dependency)) ? (
-                                      // If it's a number (as string), truncate to two decimals
-                                      (parseFloat(Column_Inter_Dependency).toString().slice(0, Column_Inter_Dependency.indexOf('.') + 3)) + "%"  // Truncate after two decimal places
-                                    ) : (
-                                      // If it's not a number, display it as is (e.g., "Full", "Empty")
-                                      Column_Inter_Dependency
-                                    )
-                                  ) : (
-                                    // For numbers, truncate to two decimal places
-                                    (parseFloat(Column_Inter_Dependency.toString()).toString().slice(0, Column_Inter_Dependency.toString().indexOf('.') + 3)) + "%"  // Truncate to two decimal places
-                                  )}
-                                </Td>
-                              </Tr>
-                              <Tr>
-                                <Td fontWeight="bold">Columns</Td>
-                                <Td textAlign="right">{columns.length}</Td>
-                              </Tr>
-                              <Tr>
-                                <Td fontWeight="bold">Common Null Count</Td>
-                                <Td textAlign="right">
-                                  {Common_Null_Count ?? 'N/A'}
-                                </Td>
-                              </Tr>
-                              <Tr>
-                                <Td fontWeight="bold">Uncommon Null Count</Td>
-                                <Td textAlign="right">
-                                  {Uncommon_Null_Count >= 0
-                                    ? Uncommon_Null_Count
-                                    : ' '}
-                                </Td>
-                              </Tr>
-                              <Tr>
-                                <Td fontWeight="bold">Comments</Td>
-                                <Td textAlign="right">
-                                  <Box
-                                    display="flex"
-                                    gap="10px"
-                                    justifyContent="end"
-                                  >
-                                    {/* Comment Count */}
+                    return (
+                      <Card
+                        key={bucketName}
+                        w="370px"
+                        h="auto"
+                        p={3}
+                        borderRadius="lg"
+                        boxShadow="lg"
+                        bg={colorMode === 'light' ? 'white' : 'gray.800'}
+                        transition="transform 0.3s ease, box-shadow 0.3s ease"
+                        _hover={{
+                          boxShadow: '0px 0px 15px rgba(0, 120, 255, 0.4)',
+                          cursor: 'pointer',
+                        }}
+                        onClick={() =>
+                          handleCardClick(
+                            bucketName,
+                            data[bucketName]?.columns || [],
+                            data[bucketName]?.Pivot_Columns || [],
+                          )
+                        } // Pass Pivot_Columns here
+                      >
+                        <CardHeader pb={3} textAlign="center">
+                          <Heading
+                            size="md"
+                            color="blue.600"
+                            display="inline-flex"
+                            alignItems="center"
+                          >
+                            {bucketName}
+                            {Column_Inter_Dependency === 'Full' && (
+                              <FaCheckCircle
+                                color="#90EE90"
+                                style={{ marginLeft: '5px' }}
+                              />
+                            )}
+                          </Heading>
+
+                          <Box
+                            position="absolute"
+                            top={2}
+                            right={2}
+                            fontSize="lg"
+                            cursor="pointer"
+                          >
+                            <Popover placement={placement} trigger="click">
+                              <PopoverTrigger>
+                                <Box
+                                  onClick={(event) => event.stopPropagation()}
+                                >
+                                  {' '}
+                                  {/* Prevents card click */}
+                                  <FaInfoCircle />
+                                </Box>
+                              </PopoverTrigger>
+                              <PopoverContent
+                                ref={popoverRef}
+                                maxH="300px"
+                                overflowY="auto" // Enables vertical scrolling
+                                overflowX="hidden" // Disables horizontal scrolling
+                                boxShadow="lg"
+                                borderRadius="md"
+                                p={3}
+                                onClick={(
+                                  event: React.MouseEvent<HTMLButtonElement>,
+                                ) => event.stopPropagation()} // Prevents card click event
+                                width="fit-content" // Ensures it only takes necessary width
+                                minW="200px" // Prevents it from shrinking too much
+                              >
+                                <PopoverArrow />
+                                <PopoverCloseButton />
+                                <PopoverBody whiteSpace="nowrap">
+                                  {showTable(
+                                    columns,
+                                    data[bucketName]?.Pivot_Columns || [],
+                                  )}{' '}
+                                  {/* Pass Pivot_Columns here */}
+                                </PopoverBody>
+                              </PopoverContent>
+                            </Popover>
+                          </Box>
+
+                          <TableContainer mt={3}>
+                            <Table variant="simple" size="sm">
+                              <Tbody>
+                                <Tr>
+                                  <Td fontWeight="bold">
+                                    Column Inter-Dependency
+                                  </Td>
+                                  <Td textAlign="right">
+                                    {
+                                      typeof Column_Inter_Dependency ===
+                                      'string'
+                                        ? // Check if the string can be parsed as a number
+                                          !isNaN(
+                                            parseFloat(Column_Inter_Dependency),
+                                          )
+                                          ? // If it's a number (as string), truncate to two decimals
+                                            parseFloat(Column_Inter_Dependency)
+                                              .toString()
+                                              .slice(
+                                                0,
+                                                Column_Inter_Dependency.indexOf(
+                                                  '.',
+                                                ) + 3,
+                                              ) + '%' // Truncate after two decimal places
+                                          : // If it's not a number, display it as is (e.g., "Full", "Empty")
+                                            Column_Inter_Dependency
+                                        : // For numbers, truncate to two decimal places
+                                          parseFloat(
+                                            Column_Inter_Dependency.toString(),
+                                          )
+                                            .toString()
+                                            .slice(
+                                              0,
+                                              Column_Inter_Dependency.toString().indexOf(
+                                                '.',
+                                              ) + 3,
+                                            ) + '%' // Truncate to two decimal places
+                                    }
+                                  </Td>
+                                </Tr>
+                                <Tr>
+                                  <Td fontWeight="bold">Columns</Td>
+                                  <Td textAlign="right">{columns.length}</Td>
+                                </Tr>
+                                <Tr>
+                                  <Td fontWeight="bold">Common Null Count</Td>
+                                  <Td textAlign="right">
+                                    {Common_Null_Count ?? 'N/A'}
+                                  </Td>
+                                </Tr>
+                                <Tr>
+                                  <Td fontWeight="bold">Uncommon Null Count</Td>
+                                  <Td textAlign="right">
+                                    {Uncommon_Null_Count >= 0
+                                      ? Uncommon_Null_Count
+                                      : ' '}
+                                  </Td>
+                                </Tr>
+                                <Tr>
+                                  <Td fontWeight="bold">Comments</Td>
+                                  <Td textAlign="right">
                                     <Box
-                                      display="inline-flex"
-                                      alignItems="center"
-                                      justifyContent="center"
-                                      px="0.4rem"
-                                      py="0.1rem"
-                                      border="1px solid #ccc"
-                                      borderRadius="4px"
-                                      fontSize="0.9rem"
-                                      fontWeight="bold"
-                                      backgroundColor="gray.100"
-                                      color="black"
-                                      minWidth="24px"
-                                      textAlign="center"
+                                      display="flex"
+                                      gap="10px"
+                                      justifyContent="end"
                                     >
-                                      {commentCounts?.[bucketName] || 0}
-                                    </Box>
-
-                                    <Popover trigger="click" placement="top">
-                                      <PopoverTrigger>
-                                        <Box
-                                          as="button"
-                                          onClick={(event: React.MouseEvent<HTMLButtonElement>) => event.stopPropagation()} // Prevents card click
-                                        >
-                                          <GrTooltip
-                                            style={{
-                                              fontSize: '1.5rem',
-                                              cursor: 'pointer',
-                                              color: '#007bff',
-                                            }}
-                                          />
-                                        </Box>
-                                      </PopoverTrigger>
-                                      <PopoverContent
-                                        onClick={(event: React.MouseEvent<HTMLButtonElement>) => event.stopPropagation()}
-                                        bg="gray.100"
-                                        boxShadow="lg"
-                                        borderRadius="md"
-                                        p={3}
-                                        maxH="280px" // Set max height for the popover
-                                        overflowY="auto" // Enable vertical scrolling
-                                        maxWidth="1000px" // Set a max width to prevent excessive stretching
-                                        minW="200px" // Prevent the popover from becoming too narrow
+                                      {/* Comment Count */}
+                                      <Box
+                                        display="inline-flex"
+                                        alignItems="center"
+                                        justifyContent="center"
+                                        px="0.4rem"
+                                        py="0.1rem"
+                                        border="1px solid #ccc"
+                                        borderRadius="4px"
+                                        fontSize="0.9rem"
+                                        fontWeight="bold"
+                                        backgroundColor="gray.100"
+                                        color="black"
+                                        minWidth="24px"
+                                        textAlign="center"
                                       >
-                                        <PopoverCloseButton color="black" />
-                                        <PopoverBody textAlign="left">
-                                          {bucketComments?.[bucketName]?.length > 0 ? (
-                                            <Box display="flex" flexDirection="column" gap={2}>
-                                              {bucketComments[bucketName]
-                                                .filter((comment) => comment && comment.text) // Ensure comment is not null/undefined
-                                                .map((comment, index) => (
-                                                  <Box key={index}>
-                                                    <Box
-                                                      fontSize="sm"
-                                                      color="black"
-                                                      maxWidth="100%" // Ensure it respects the parent width
-                                                      whiteSpace="normal" // Allow wrapping
-                                                      wordBreak="break-word" // Break long words
-                                                    >
-                                                      <strong>{index + 1}.</strong> {comment?.text || 'No text available'}
+                                        {commentCounts?.[bucketName] || 0}
+                                      </Box>
+
+                                      <Popover trigger="click" placement="top">
+                                        <PopoverTrigger>
+                                          <Box
+                                            as="button"
+                                            onClick={(
+                                              event: React.MouseEvent<HTMLButtonElement>,
+                                            ) => event.stopPropagation()} // Prevents card click
+                                          >
+                                            <GrTooltip
+                                              style={{
+                                                fontSize: '1.5rem',
+                                                cursor: 'pointer',
+                                                color: '#007bff',
+                                              }}
+                                            />
+                                          </Box>
+                                        </PopoverTrigger>
+                                        <PopoverContent
+                                          onClick={(
+                                            event: React.MouseEvent<HTMLButtonElement>,
+                                          ) => event.stopPropagation()}
+                                          bg="gray.100"
+                                          boxShadow="lg"
+                                          borderRadius="md"
+                                          p={3}
+                                          maxH="280px" // Set max height for the popover
+                                          overflowY="auto" // Enable vertical scrolling
+                                          maxWidth="1000px" // Set a max width to prevent excessive stretching
+                                          minW="200px" // Prevent the popover from becoming too narrow
+                                        >
+                                          <PopoverCloseButton color="black" />
+                                          <PopoverBody textAlign="left">
+                                            {bucketComments?.[bucketName]
+                                              ?.length > 0 ? (
+                                              <Box
+                                                display="flex"
+                                                flexDirection="column"
+                                                gap={2}
+                                              >
+                                                {bucketComments[bucketName]
+                                                  .filter(
+                                                    (comment) =>
+                                                      comment && comment.text,
+                                                  ) // Ensure comment is not null/undefined
+                                                  .map((comment, index) => (
+                                                    <Box key={index}>
+                                                      <Box
+                                                        fontSize="sm"
+                                                        color="black"
+                                                        maxWidth="100%" // Ensure it respects the parent width
+                                                        whiteSpace="normal" // Allow wrapping
+                                                        wordBreak="break-word" // Break long words
+                                                      >
+                                                        <strong>
+                                                          {index + 1}.
+                                                        </strong>{' '}
+                                                        {comment?.text ||
+                                                          'No text available'}
+                                                      </Box>
+                                                      <Box
+                                                        fontSize="xs"
+                                                        color="gray.600"
+                                                      >
+                                                        {comment?.['time-stamp']
+                                                          ? new Date(
+                                                              comment[
+                                                                'time-stamp'
+                                                              ],
+                                                            ).toLocaleString()
+                                                          : 'No timestamp'}
+                                                      </Box>
                                                     </Box>
-                                                    <Box fontSize="xs" color="gray.600">
-                                                      {comment?.['time-stamp']
-                                                        ? new Date(comment['time-stamp']).toLocaleString()
-                                                        : 'No timestamp'}
-                                                    </Box>
-                                                  </Box>
-                                                ))}
-                                            </Box>
-                                          ) : (
-                                            <Box textAlign="center" fontSize="sm" fontWeight="bold" color="gray.600">
-                                              No comments available
-                                            </Box>
-                                          )}
-                                        </PopoverBody>
-                                      </PopoverContent>
-                                    </Popover>
-                                  </Box>
-                                </Td>
-                              </Tr>
-                            </Tbody>
-                          </Table>
-                        </TableContainer>
-                      </CardHeader>
-                      <Box position="absolute" top={2} left={2}>
-                        <Tooltip
-                          label="Click to download 100 samples"
-                          fontSize="sm"
-                          placement="top"
-                        >
-                          {/* Only render the button if Common_Null_Count is greater than 0 */}
-                          {Common_Null_Count > 0 && (
+                                                  ))}
+                                              </Box>
+                                            ) : (
+                                              <Box
+                                                textAlign="center"
+                                                fontSize="sm"
+                                                fontWeight="bold"
+                                                color="gray.600"
+                                              >
+                                                No comments available
+                                              </Box>
+                                            )}
+                                          </PopoverBody>
+                                        </PopoverContent>
+                                      </Popover>
+                                    </Box>
+                                  </Td>
+                                </Tr>
+                              </Tbody>
+                            </Table>
+                          </TableContainer>
+                        </CardHeader>
+                        <Box position="absolute" top={2} left={2}>
+                          <Tooltip
+                            label="Click to download 100 samples"
+                            fontSize="sm"
+                            placement="top"
+                          >
+                            {/* Only render the button if Common_Null_Count is greater than 0 */}
+                            {Common_Null_Count > 0 && (
+                              <button
+                                onClick={(event) => {
+                                  event.stopPropagation(); // Prevent the card's onClick from triggering
+
+                                  // Handle download if Common_Null_Count > 0
+                                  handleDownload(
+                                    tableName,
+                                    taskId,
+                                    bucketName,
+                                    columns,
+                                  );
+                                }}
+                              >
+                                <MdDownload size="1.5rem" />
+                              </button>
+                            )}
+                          </Tooltip>
+                        </Box>
+                        <Box bottom={2} right={2} alignSelf={'end'}>
+                          <Tooltip
+                            label="Remove this cluster"
+                            fontSize="sm"
+                            placement="top"
+                          >
                             <button
                               onClick={(event) => {
-                                event.stopPropagation(); // Prevent the card's onClick from triggering
-
-                                // Handle download if Common_Null_Count > 0
-                                handleDownload(tableName, taskId, bucketName, columns);
+                                event.stopPropagation();
+                                setSelectedBucket(bucketName);
+                                setIsOpen(true);
+                              }}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
                               }}
                             >
-                              <MdDownload size="1.5rem" />
+                              <MdDelete size="1.5rem" />
                             </button>
-                          )}
-                        </Tooltip>
-                      </Box>
-                      <Box position="absolute" bottom={2} right={2}>
-                        <Tooltip label="Remove this cluster" fontSize="sm" placement="top">
-                          <button
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setSelectedBucket(bucketName); // Set the selected bucket
-                              setIsOpen(true); // Open the confirmation dialog
-                            }}
-                            style={{ background: "none", border: "none", cursor: "pointer" }}
-                          >
-                            <MdDelete size="1.5rem" />
-                          </button>
-                        </Tooltip>
-                      </Box>
-                      <AlertDialog
-                        isOpen={isOpen}
-                        leastDestructiveRef={cancelRef}
-                        onClose={() => setIsOpen(false)}
-                      >
-                        <AlertDialogOverlay>
-                          <AlertDialogContent>
-                            <AlertDialogHeader fontSize="lg" fontWeight="bold">
-                              Confirm Deletion
-                            </AlertDialogHeader>
-
-                            <AlertDialogBody>
-                              Are you sure you want to delete the cluster "{selectedBucket}" ? Once deleted, it cannot be restored.
-                            </AlertDialogBody>
-
-                            <AlertDialogFooter>
-                              <Button ref={cancelRef} onClick={() => setIsOpen(false)}>
-                                Cancel
-                              </Button>
-                              <Button
-                                colorScheme="red"
-                                onClick={() => {
-                                  if (selectedBucket) {
-                                    updateShowFlagAPI(tableName, taskId, selectedBucket, Toast);
-                                  }
-                                  setIsOpen(false); // Close the dialog after confirmation
-                                }}
-                                ml={3}
+                          </Tooltip>
+                        </Box>
+                        <AlertDialog
+                          isOpen={isOpen}
+                          leastDestructiveRef={cancelRef}
+                          onClose={() => setIsOpen(false)}
+                        >
+                          <AlertDialogOverlay>
+                            <AlertDialogContent>
+                              <AlertDialogHeader
+                                fontSize="lg"
+                                fontWeight="bold"
                               >
-                                Confirm
-                              </Button>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialogOverlay>
-                      </AlertDialog>
-                    </Card>
-                  );
-                },
-              )}
-          </SimpleGrid>
-        </Box>
+                                Confirm Deletion
+                              </AlertDialogHeader>
+
+                              <AlertDialogBody>
+                                Are you sure you want to delete the cluster "
+                                {selectedBucket}" ? Once deleted, it cannot be
+                                restored.
+                              </AlertDialogBody>
+
+                              <AlertDialogFooter>
+                                <Button
+                                  ref={cancelRef}
+                                  onClick={() => setIsOpen(false)}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button
+                                  colorScheme="red"
+                                  onClick={() => {
+                                    if (selectedBucket) {
+                                      updateShowFlagAPI(
+                                        tableName,
+                                        taskId,
+                                        selectedBucket,
+                                        Toast,
+                                      );
+                                    }
+                                    setIsOpen(false);
+                                  }}
+                                  ml={3}
+                                >
+                                  Confirm
+                                </Button>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialogOverlay>
+                        </AlertDialog>
+                      </Card>
+                    );
+                  },
+                )}
+            </SimpleGrid>
+          </Box>
         )
       ) : (
         <Box
