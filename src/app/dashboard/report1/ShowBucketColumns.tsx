@@ -25,10 +25,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { FaEye } from 'react-icons/fa';
 import { GrTooltip } from 'react-icons/gr';
-import {
-  fetchPaginatedData,
-  fetchColumnComments
-} from 'utils/api/report';
+import { fetchPaginatedData, fetchColumnComments } from 'utils/api/report';
 import NullRecords from './NullRecords';
 import { ChevronRightIcon } from '@chakra-ui/icons';
 
@@ -59,8 +56,6 @@ interface ColumnData {
 interface ApiResponse {
   [bucketName: string]: ColumnData;
 }
-
-
 
 // ========================================== ShowBucketColumns Component ==========================================
 
@@ -99,35 +94,36 @@ const ShowBucketColumns: React.FC<ColumnCountProps> = ({
       enabled: !!taskId && !!tableName && !!selectedBucket,
     });
 
-
   // Fetch Column Comments
-  const { data: columnCommentsData, isLoading: isCommentsLoading } = useQuery<ApiResponse>({
-    queryKey: ['columnComments', tableName, taskId, selectedBucket],
-    queryFn: () => fetchColumnComments(tableName, taskId, selectedBucket),
-    enabled: !!taskId && !!tableName && !!selectedBucket,
-    refetchInterval: 1000
-  });
+  const { data: columnCommentsData, isLoading: isCommentsLoading } =
+    useQuery<ApiResponse>({
+      queryKey: ['columnComments', tableName, taskId, selectedBucket],
+      queryFn: () => fetchColumnComments(tableName, taskId, selectedBucket),
+      enabled: !!taskId && !!tableName && !!selectedBucket,
+      refetchInterval: 1000,
+    });
 
-  console.log({ columnCommentsData })
+  console.log({ columnCommentsData });
 
   // Extract comment count and comments
   const columnCommentCounts: Record<string, number> = {};
-  const columnComments: Record<string, { text: string; timestamp: string }[]> = {};
+  const columnComments: Record<string, { text: string; timestamp: string }[]> =
+    {};
 
-  if (columnCommentsData?.data) { // Ensure `data` exists
-    Object.entries(columnCommentsData.data).forEach(([columnName, columnData]) => {
-      columnCommentCounts[columnName] = columnData.column_comment_count || 0;
-      columnComments[columnName] = columnData.column_comments
-        ? columnData.column_comments.map((comment: ColumnComments) => ({
-          text: comment.text,
-          timestamp: comment["time-stamp"], // Extract timestamp
-        }))
-        : []; // Fallback to empty array if undefined
-    });
+  if (columnCommentsData?.data) {
+    // Ensure `data` exists
+    Object.entries(columnCommentsData.data).forEach(
+      ([columnName, columnData]) => {
+        columnCommentCounts[columnName] = columnData.column_comment_count || 0;
+        columnComments[columnName] = columnData.column_comments
+          ? columnData.column_comments.map((comment: ColumnComments) => ({
+              text: comment.text,
+              timestamp: comment['time-stamp'], // Extract timestamp
+            }))
+          : []; // Fallback to empty array if undefined
+      },
+    );
   }
-
-
-
 
   useEffect(() => {
     if (paginatedData?.total_count !== undefined) {
@@ -177,27 +173,36 @@ const ShowBucketColumns: React.FC<ColumnCountProps> = ({
         >
           {/* Breadcrumb Section */}
           <Box
-            fontSize="1.6rem"
-            border="2px solid gray"
+            fontSize="1.4rem"
+            border="1px solid gray"
             borderRadius="8px"
             padding="8px 12px"
-            // background="blue.600"
             color="white"
+            mb={8}
           >
-            <Breadcrumb spacing="8px" separator={<ChevronRightIcon color="white" boxSize={5} />}>
+            <Breadcrumb
+              spacing="8px"
+              separator={<ChevronRightIcon color="blue" boxSize={8} />}
+            >
               <BreadcrumbItem>
-                <BreadcrumbLink fontWeight="bold" color="white">{tableName}</BreadcrumbLink>
+                <BreadcrumbLink fontWeight="bold" color="white">
+                  {tableName}
+                </BreadcrumbLink>
               </BreadcrumbItem>
 
               {taskId && (
                 <BreadcrumbItem>
-                  <BreadcrumbLink fontWeight="bold" color="white">{taskId}</BreadcrumbLink>
+                  <BreadcrumbLink fontWeight="bold" color="white">
+                    {taskId}
+                  </BreadcrumbLink>
                 </BreadcrumbItem>
               )}
 
               {selectedBucket && (
                 <BreadcrumbItem>
-                  <BreadcrumbLink fontWeight="bold" color="white">{selectedBucket}</BreadcrumbLink>
+                  <BreadcrumbLink fontWeight="bold" color="white">
+                    {selectedBucket}
+                  </BreadcrumbLink>
                 </BreadcrumbItem>
               )}
             </Breadcrumb>
@@ -209,7 +214,7 @@ const ShowBucketColumns: React.FC<ColumnCountProps> = ({
           </Button>
         </Box>
         <TableContainer>
-          <Table fontSize={18} variant="simple" size="lg" mt={8}>
+          <Table fontSize={18} variant="simple" size="lg">
             <Thead>
               <Tr>
                 <Th>Serial No.</Th>
@@ -264,19 +269,23 @@ const ShowBucketColumns: React.FC<ColumnCountProps> = ({
                         <PopoverTrigger>
                           <Box
                             as="button"
-                            onClick={(event: React.MouseEvent<HTMLButtonElement>) => event.stopPropagation()} // Prevents popover closing on button click
+                            onClick={(
+                              event: React.MouseEvent<HTMLButtonElement>,
+                            ) => event.stopPropagation()} // Prevents popover closing on button click
                           >
                             <GrTooltip
                               style={{
-                                fontSize: "1.5rem",
-                                cursor: "pointer",
-                                color: "#007bff",
+                                fontSize: '1.5rem',
+                                cursor: 'pointer',
+                                color: '#007bff',
                               }}
                             />
                           </Box>
                         </PopoverTrigger>
                         <PopoverContent
-                          onClick={(event: React.MouseEvent<HTMLButtonElement>) => event.stopPropagation()} // Prevents popover closing on content click
+                          onClick={(
+                            event: React.MouseEvent<HTMLButtonElement>,
+                          ) => event.stopPropagation()} // Prevents popover closing on content click
                           bg="gray.100"
                           boxShadow="lg"
                           borderRadius="md"
@@ -303,8 +312,8 @@ const ShowBucketColumns: React.FC<ColumnCountProps> = ({
                                     <Box fontSize="xs" color="gray.600">
                                       {new Date(comment.timestamp).toLocaleString()}
                                     </Box>
-                                  </Box>
-                                ))}
+                                  ),
+                                )}
                               </Box>
                             ) : (
                               <Box

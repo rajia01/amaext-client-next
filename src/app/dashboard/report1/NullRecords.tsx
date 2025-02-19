@@ -14,6 +14,9 @@ import {
   Tr,
   useToast,
   useColorMode,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
 } from '@chakra-ui/react';
 import { useQuery } from '@tanstack/react-query';
 import React, { useEffect, useRef, useState } from 'react';
@@ -21,6 +24,7 @@ import { FaEye } from 'react-icons/fa';
 import { addComment, fetchNullRecords } from 'utils/api/report';
 import { getSkeleton } from 'utils/skeleton';
 import DBRecord from './DBRecord';
+import { ChevronRightIcon } from '@chakra-ui/icons';
 
 interface NullRecordsProps {
   taskId: number;
@@ -109,7 +113,6 @@ const NullRecords: React.FC<NullRecordsProps> = ({
     }
   };
 
-
   // **************************************************************************************
   const handleViewDBRecord = (record_id: string) => {
     setSelectedRecordId(record_id);
@@ -119,7 +122,6 @@ const NullRecords: React.FC<NullRecordsProps> = ({
   };
 
   const totalPages = records ? Math.ceil(records.total_items / rowsPerPage) : 0;
-
 
   useEffect(() => {
     if (records?.total_items) {
@@ -143,7 +145,6 @@ const NullRecords: React.FC<NullRecordsProps> = ({
       ? `Enter the comment for ${columnName[0]}`
       : `Enter the comment for ${bucketName}`;
   };
-
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
@@ -176,15 +177,52 @@ const NullRecords: React.FC<NullRecordsProps> = ({
         }}
       >
         <div>
-          <div style={{ fontSize: '1.6rem' }}>
-            {tableName}{' '}
-            <span style={{ color: 'blue', fontSize: '1.8rem' }}>/</span>{' '}
-            {taskId}{' '}
-            <span style={{ color: 'blue', fontSize: '1.8rem' }}>/</span>{' '}
-            {bucketName}{' '}
-            <span style={{ color: 'blue', fontSize: '1.8rem' }}>/</span>{' '}
-            {columnName.join(', ')}
-          </div>
+          {/* Breadcrumb Section */}
+          <Box
+            fontSize="1.4rem"
+            border="1px solid gray"
+            borderRadius="8px"
+            padding="8px 12px"
+            color="white"
+            mb={12}
+            display="inline-block"
+            maxWidth="max-content"
+          >
+            <Breadcrumb
+              spacing="8px"
+              separator={<ChevronRightIcon color="blue" boxSize={8} />}
+            >
+              <BreadcrumbItem>
+                <BreadcrumbLink fontWeight="bold" color="white">
+                  {tableName}
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+
+              {taskId && (
+                <BreadcrumbItem>
+                  <BreadcrumbLink fontWeight="bold" color="white">
+                    {taskId}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+              )}
+
+              {bucketName && (
+                <BreadcrumbItem>
+                  <BreadcrumbLink fontWeight="bold" color="white">
+                    {bucketName}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+              )}
+
+              {columnName && (
+                <BreadcrumbItem>
+                  <BreadcrumbLink fontWeight="bold" color="white">
+                    {columnName.join(', ')}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+              )}
+            </Breadcrumb>
+          </Box>
 
           <div>
             <Flex align="center" gap={4} my={4} width="100%">
@@ -208,7 +246,11 @@ const NullRecords: React.FC<NullRecordsProps> = ({
                     : 'dark-placeholder'
                 }
               />
-              <Button onClick={handleCommentSubmit} size="md" colorScheme="blue">
+              <Button
+                onClick={handleCommentSubmit}
+                size="md"
+                colorScheme="blue"
+              >
                 Submit
               </Button>
             </Flex>
@@ -314,7 +356,6 @@ const NullRecords: React.FC<NullRecordsProps> = ({
         <Box mt={2} textAlign="center">
           Page {currentPage} of {storedTotalPages}
         </Box>
-
       </div>
 
       {selectedRecordId && (

@@ -1,7 +1,11 @@
 'use client';
 
+import { ChevronRightIcon } from '@chakra-ui/icons';
 import {
-  Heading,
+  Box,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
   Link,
   Table,
   TableContainer,
@@ -10,7 +14,6 @@ import {
   Th,
   Thead,
   Tr,
-  Box
 } from '@chakra-ui/react';
 import { useQuery } from '@tanstack/react-query';
 import NextLink from 'next/link';
@@ -29,9 +32,13 @@ interface DataItem {
   [key: string]: string | number | null | undefined;
 }
 
-const DbRecord: React.FC<DbRecordProps> = ({ tableName, taskId, recordId, bucketName, columnName }) => {
-  // console.log('Record ID: ', recordId);
-
+const DbRecord: React.FC<DbRecordProps> = ({
+  tableName,
+  taskId,
+  recordId,
+  bucketName,
+  columnName,
+}) => {
   const {
     data: DbViewList,
     isLoading: isDbLoading,
@@ -49,73 +56,83 @@ const DbRecord: React.FC<DbRecordProps> = ({ tableName, taskId, recordId, bucket
     return regex.test(str);
   };
 
-  if (isDbLoading) {
-    return (
-      <div
-        style={{
-          marginTop: '6rem',
-          padding: '1rem',
-          border: '1px solid #ccc',
-        }}
+  return (
+    <div
+      style={{
+        marginTop: '6rem',
+        padding: '1rem',
+        border: '1px solid #ccc',
+      }}
+    >
+      {/* Breadcrumb Section */}
+      <Box
+        fontSize="1.4rem"
+        border="1px solid gray"
+        borderRadius="8px"
+        padding="8px 12px"
+        color="white"
+        mb={12}
+        display="inline-block"
+        maxWidth="max-content"
       >
-        {/* Breadcrumb Section */}
-        <Box fontSize="1.6rem">
-          {tableName}{' '}
-          <span style={{ color: 'blue', fontSize: '1.8rem' }}>/</span>{' '}
-          {taskId}{' '}
-          <span style={{ color: 'blue', fontSize: '1.8rem' }}>/</span>{' '}
-          {bucketName}{' '}
-          <span style={{ color: 'blue', fontSize: '1.8rem' }}>/</span>{' '}
-          {columnName}{' '}
-          <span style={{ color: 'blue', fontSize: '1.8rem' }}>/</span>{' '}
-          {recordId}{' '}
-        </Box>
-        <TableContainer>
-          <Table variant="simple">
-            <Thead>
-              <Tr>
-                <Th>Column Name</Th>
-                <Th>Value</Th>
-              </Tr>
-            </Thead>
-            <Tbody>{getSkeleton(5, 2)}</Tbody>
-          </Table>
-        </TableContainer>
-      </div>
-    );
-  }
+        <Breadcrumb
+          spacing="8px"
+          separator={<ChevronRightIcon color="blue" boxSize={8} />}
+        >
+          <BreadcrumbItem>
+            <BreadcrumbLink fontWeight="bold" color="white">
+              {tableName}
+            </BreadcrumbLink>
+          </BreadcrumbItem>
 
-  if (isDbSuccess && data) {
-    return (
-      <div
-        style={{
-          marginTop: '6rem',
-          padding: '1rem',
-          border: '1px solid #ccc',
-        }}
-      >
-        {/* Breadcrumb Section */}
-        <Box fontSize="1.6rem">
-          {tableName}{' '}
-          <span style={{ color: 'blue', fontSize: '1.8rem' }}>/</span>{' '}
-          {taskId}{' '}
-          <span style={{ color: 'blue', fontSize: '1.8rem' }}>/</span>{' '}
-          {bucketName}{' '}
-          <span style={{ color: 'blue', fontSize: '1.8rem' }}>/</span>{' '}
-          {columnName}{' '}
-          <span style={{ color: 'blue', fontSize: '1.8rem' }}>/</span>{' '}
-          {recordId}{' '}
-        </Box>
-        <TableContainer>
-          <Table variant="simple">
-            <Thead>
-              <Tr>
-                <Th>Column Name</Th>
-                <Th>Value</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {Object.entries(data).length > 0 ? (
+          {taskId && (
+            <BreadcrumbItem>
+              <BreadcrumbLink fontWeight="bold" color="white">
+                {taskId}
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+          )}
+
+          {bucketName && (
+            <BreadcrumbItem>
+              <BreadcrumbLink fontWeight="bold" color="white">
+                {bucketName}
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+          )}
+
+          {columnName && (
+            <BreadcrumbItem>
+              <BreadcrumbLink fontWeight="bold" color="white">
+                {columnName}
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+          )}
+
+          {recordId && (
+            <BreadcrumbItem>
+              <BreadcrumbLink fontWeight="bold" color="white">
+                {recordId}
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+          )}
+        </Breadcrumb>
+      </Box>
+
+      {/* Table Container */}
+      <TableContainer>
+        <Table variant="simple">
+          <Thead>
+            <Tr>
+              <Th>Column Name</Th>
+              <Th>Value</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {isDbLoading ? (
+              getSkeleton(5, 2) // Show skeleton when loading
+            ) : isDbSuccess && data ? (
+              Object.entries(data).length > 0 ? (
                 Object.entries(data).map(([key, value], idx) => {
                   const isInvalidValue =
                     value === '' || value === null || value === 'undefined';
@@ -158,15 +175,17 @@ const DbRecord: React.FC<DbRecordProps> = ({ tableName, taskId, recordId, bucket
                 <Tr>
                   <Td colSpan={2}>No data available</Td>
                 </Tr>
-              )}
-            </Tbody>
-          </Table>
-        </TableContainer>
-      </div>
-    );
-  }
-
-  return <div>No data found for ID: {recordId}</div>;
+              )
+            ) : (
+              <Tr>
+                <Td colSpan={2}>No data found for ID: {recordId}</Td>
+              </Tr>
+            )}
+          </Tbody>
+        </Table>
+      </TableContainer>
+    </div>
+  );
 };
 
 export default DbRecord;
