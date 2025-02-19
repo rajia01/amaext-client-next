@@ -25,17 +25,25 @@ import {
   Text,
   Th,
   Thead,
+  Toast,
   Tooltip,
   Tr,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay,
   useColorMode,
 } from '@chakra-ui/react';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { FaCheckCircle, FaInfoCircle } from 'react-icons/fa';
+import { FaCheckCircle, FaFlag, FaInfoCircle } from 'react-icons/fa';
 import { GrTooltip } from 'react-icons/gr';
-import { MdDownload } from 'react-icons/md';
+import { MdDelete, MdDownload } from 'react-icons/md';
 import { fetchBucketComments, fetchBucketData } from 'utils/api/report';
 import ShowBucketColumns from './ShowBucketColumns';
+import { useToast } from "@chakra-ui/react";
 
 import {
   BackendDataResponse,
@@ -50,7 +58,7 @@ const seller_table = 'kevin_testing';
 const product_details = 'ddmapp_amazonproductdetailsnew_data_1028';
 const product_list = 'ddmapp_amazonproductlist_data_1028';
 
-const tableName: string = "tbl_amazonsellerdetails_ia";
+const tableName: string = seller_table;
 
 // ============================ Table Component ============================
 function showTable(
@@ -159,6 +167,8 @@ const Page: React.FC = () => {
   const taskIdInputRef = useRef<HTMLInputElement>(null);
   const columnCountRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const cancelRef = useRef();
 
   // Fetch bucket data when taskId is set
   const { data, isLoading, error } = useQuery<BackendDataResponse>({
@@ -185,24 +195,60 @@ const Page: React.FC = () => {
     }
   };
 
-  // API call to update show_flag
-  const updateShowFlagAPI = async (bucketName: string) => {
-    const response = await fetch(
-      `http://127.0.0.1:8000/tbl_amazonsellerdetails_ia/1024/update-show-flag?bucket_name=${bucketName}`,
-      {
-        method: 'POST',
-        headers: {
-          'accept': 'application/json',
-        },
+  // ----------------------------------------------------API call to update show_flag-----------------------------------------------------
+
+  const updateShowFlagAPI = async (
+    tableName: string,
+    taskId: number,
+    bucketName: string,
+    toast: any // Passing toast as a parameter
+  ) => {
+    try {
+      const queryParams = new URLSearchParams({ bucket_name: bucketName }).toString();
+
+      const response = await fetch(
+        `http://localhost:8000/${tableName}/${taskId}/update-show-flag/?${queryParams}`,
+        {
+          method: "POST",
+          headers: {
+            accept: "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Error updating show flag");
       }
-    );
 
-    if (!response.ok) {
-      throw new Error('Error updating show flag');
+      const data = await response.json();
+      console.log(data);
+
+      // Show success toast
+      toast({
+        title: `Flag set to false for ${bucketName}`,
+        description: "The show flag has been successfully updated.",
+        status: "success",
+        duration: 3000, // Duration in milliseconds
+        isClosable: true,
+        position: "top-right",
+      });
+
+      return data;
+    } catch (error) {
+      console.error("Error:", error);
+
+      // Show error toast if request fails
+      toast({
+        title: "Update Failed",
+        description: "Could not update show flag. Please try again.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+        position: "top-right",
+      });
     }
-
-    return response.json(); // Returning the response JSON
   };
+
 
   // Update the `handleCardClick` method to pass the Pivot_Columns
   const handleCardClick = (
@@ -400,8 +446,10 @@ const Page: React.FC = () => {
                     Column_Inter_Dependency,
                     Common_Null_Count,
                     Uncommon_Null_Count,
+                    Show_Flag
                   },
                 ]) => {
+                  if (Show_Flag !== true) return null;
                   // Extract comment counts and bucket comments
                   const commentCounts = bucketComment
                     ? Object.fromEntries(
@@ -660,6 +708,52 @@ const Page: React.FC = () => {
                           )}
                         </Tooltip>
                       </Box>
+                      <Box position="absolute" bottom={2} right={2}>
+                        <Tooltip label="Remove this cluster" fontSize="sm" placement="top">
+                          <button
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setIsOpen(true); // Open the confirmation dialog
+                            }}
+                            style={{ background: "none", border: "none", cursor: "pointer" }}
+                          >
+                            <MdDelete size="1.5rem" />
+                          </button>
+                        </Tooltip>
+                      </Box>
+                      <AlertDialog
+                        isOpen={isOpen}
+                        leastDestructiveRef={cancelRef}
+                        onClose={() => setIsOpen(false)}
+                      >
+                        <AlertDialogOverlay>
+                          <AlertDialogContent>
+                            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                              Confirm Deletion
+                            </AlertDialogHeader>
+
+                            <AlertDialogBody>
+                              Are you sure you want to delete this cluster? Once deleted, it cannot be restored.
+                            </AlertDialogBody>
+
+                            <AlertDialogFooter>
+                              <Button ref={cancelRef} onClick={() => setIsOpen(false)}>
+                                Cancel
+                              </Button>
+                              <Button
+                                colorScheme="red"
+                                onClick={() => {
+                                  updateShowFlagAPI(tableName, taskId, bucketName, Toast);
+                                  setIsOpen(false); // Close the dialog after confirmation
+                                }}
+                                ml={3}
+                              >
+                                Confirm
+                              </Button>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialogOverlay>
+                      </AlertDialog>
                     </Card>
                   );
                 },
