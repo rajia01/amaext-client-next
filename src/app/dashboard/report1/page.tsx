@@ -35,6 +35,7 @@ import {
   Tooltip,
   Tr,
   useColorMode,
+  useToast,
 } from '@chakra-ui/react';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
@@ -69,10 +70,10 @@ function showTable(
       <Table variant="simple" size="sm">
         <Thead>
           <Tr>
-            <Th sx={{ color: colorMode === 'light' ? 'black' : 'white' }}>
+            <Th sx={{ color: colorMode === 'light' ? 'white' : 'black' }}>
               Column
             </Th>
-            <Th sx={{ color: colorMode === 'light' ? 'black' : 'white' }}>
+            <Th sx={{ color: colorMode === 'light' ? 'white' : 'black' }}>
               Null Count
             </Th>
           </Tr>
@@ -85,8 +86,8 @@ function showTable(
                   Pivot_Columns.includes(column.column_name)
                     ? 'red.500'
                     : colorMode === 'light'
-                      ? 'black'
-                      : 'white'
+                      ? 'white'
+                      : 'black'
                 }
               >
                 {Pivot_Columns.includes(column.column_name) ? (
@@ -165,6 +166,7 @@ const Page: React.FC = () => {
   const taskIdInputRef = useRef<HTMLInputElement>(null);
   const columnCountRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement | null>(null);
+  const toast = useToast(); // ✅ Ensure toast is initialized properly
   const [isOpen, setIsOpen] = useState(false);
   const cancelRef = useRef();
 
@@ -201,10 +203,27 @@ const Page: React.FC = () => {
   const handleTaskIdKeyPress = () => {
     const inputValue = taskIdInputRef.current?.value;
     const newTaskId = Number(inputValue);
-    if (!isNaN(newTaskId)) {
-      setTaskId(newTaskId);
-      setShowBucketColumns(false);
+    if (!inputValue || isNaN(newTaskId)) {
+      toast({
+        title: "Task ID Required",
+        description: "Please enter a valid Task ID before proceeding.",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
     }
+
+    setTaskId(newTaskId);
+    setShowBucketColumns(false);
+
+    toast({
+      title: "Task ID Set",
+      description: `Task ID ${newTaskId} has been successfully set.`,
+      status: "success",
+      duration: 1000,
+      isClosable: true,
+    });
   };
 
   // ----------------------------------------------------API call to update show_flag-----------------------------------------------------
@@ -240,9 +259,8 @@ const Page: React.FC = () => {
         title: `Flag set to false for ${bucketName}`,
         description: "The show flag has been successfully updated.",
         status: "success",
-        duration: 3000, // Duration in milliseconds
+        duration: 3000,
         isClosable: true,
-        position: "top-right",
       });
 
       return data;
@@ -256,7 +274,6 @@ const Page: React.FC = () => {
         status: "error",
         duration: 3000,
         isClosable: true,
-        position: "top-right",
       });
     }
   };
@@ -293,7 +310,7 @@ const Page: React.FC = () => {
     ));
   };
 
-  const handleDownload = async (tableName: string, taskId: number, bucket: string, columns: Column[]): Promise<void> => {
+  const handleDownload = async (tableName: string, taskId: number, bucket: string, columns: Column[], toast: ReturnType<typeof useToast>): Promise<void> => {
     try {
       // Check the value of selectedColumns before using it
       // console.log('Selected Columns:', columns);
@@ -335,10 +352,38 @@ const Page: React.FC = () => {
 
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download Successful",
+        description: `The sample file for ${bucket} has been downloaded.`,
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
     } catch (error) {
-      console.error('Error downloading file:', error);
+      console.error("Error downloading file:", error);
+
+      toast({
+        title: "Download Failed",
+        description: "Could not download the file. Please try again.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
     }
   };
+
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error Fetching Data",
+        description: "There was a problem retrieving the data. Please try again later.",
+        status: "error",
+        duration: 4000,
+        isClosable: true,
+      });
+    }
+  }, [error, toast]);
 
   return (
     <Box position="relative" p={6}>
@@ -508,48 +553,26 @@ const Page: React.FC = () => {
                             />
                           )}
                         </Heading>
-
-                        <Box
-                          position="absolute"
-                          top={2}
-                          right={2}
-                          fontSize="lg"
-                          cursor="pointer"
+                        <Tooltip
+                          hasArrow
+                          aria-label="Column Details"
+                          label={showTable(columns,
+                            data[bucketName]?.Pivot_Columns || [],)}
+                          placement="right"
+                          fontSize="xl"
+                          pt={2}
+                          maxWidth="100vw"
                         >
-                          <Popover placement={placement} trigger="click">
-                            <PopoverTrigger>
-                              <Box onClick={(event) => event.stopPropagation()}>
-                                {' '}
-                                {/* Prevents card click */}
-                                <FaInfoCircle />
-                              </Box>
-                            </PopoverTrigger>
-                            <PopoverContent
-                              ref={popoverRef}
-                              maxH="300px"
-                              overflowY="auto" // Enables vertical scrolling
-                              overflowX="hidden" // Disables horizontal scrolling
-                              boxShadow="lg"
-                              borderRadius="md"
-                              p={3}
-                              onClick={(
-                                event: React.MouseEvent<HTMLButtonElement>,
-                              ) => event.stopPropagation()} // Prevents card click event
-                              width="fit-content" // Ensures it only takes necessary width
-                              minW="200px" // Prevents it from shrinking too much
-                            >
-                              <PopoverArrow />
-                              <PopoverCloseButton />
-                              <PopoverBody whiteSpace="nowrap">
-                                {showTable(
-                                  columns,
-                                  data[bucketName]?.Pivot_Columns || [],
-                                )}{' '}
-                                {/* Pass Pivot_Columns here */}
-                              </PopoverBody>
-                            </PopoverContent>
-                          </Popover>
-                        </Box>
+                          <Box
+                            position="absolute"
+                            top={1}
+                            right={1}
+                            p={1}
+                            fontSize={"xl"}
+                          >
+                            <FaInfoCircle />
+                          </Box>
+                        </Tooltip>
 
                         <TableContainer mt={3}>
                           <Table variant="simple" size="sm">
@@ -698,7 +721,7 @@ const Page: React.FC = () => {
                                 event.stopPropagation(); // Prevent the card's onClick from triggering
 
                                 // Handle download if Common_Null_Count > 0
-                                handleDownload(tableName, taskId, bucketName, columns);
+                                handleDownload(tableName, taskId, bucketName, columns, toast);
                               }}
                             >
                               <MdDownload size="1.5rem" />
@@ -725,35 +748,33 @@ const Page: React.FC = () => {
                         leastDestructiveRef={cancelRef}
                         onClose={() => setIsOpen(false)}
                       >
-                        <AlertDialogOverlay>
-                          <AlertDialogContent>
-                            <AlertDialogHeader fontSize="lg" fontWeight="bold">
-                              Confirm Deletion
-                            </AlertDialogHeader>
+                        <AlertDialogContent>
+                          <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                            Confirm Deletion
+                          </AlertDialogHeader>
 
-                            <AlertDialogBody>
-                              Are you sure you want to delete the cluster "{selectedBucket}" ? Once deleted, it cannot be restored.
-                            </AlertDialogBody>
+                          <AlertDialogBody>
+                            Are you sure you want to delete the cluster `{selectedBucket}` ? Once deleted, it cannot be restored.
+                          </AlertDialogBody>
 
-                            <AlertDialogFooter>
-                              <Button ref={cancelRef} onClick={() => setIsOpen(false)}>
-                                Cancel
-                              </Button>
-                              <Button
-                                colorScheme="red"
-                                onClick={() => {
-                                  if (selectedBucket) {
-                                    updateShowFlagAPI(tableName, taskId, selectedBucket, Toast);
-                                  }
-                                  setIsOpen(false); // Close the dialog after confirmation
-                                }}
-                                ml={3}
-                              >
-                                Confirm
-                              </Button>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialogOverlay>
+                          <AlertDialogFooter>
+                            <Button ref={cancelRef} onClick={() => setIsOpen(false)}>
+                              Cancel
+                            </Button>
+                            <Button
+                              colorScheme="red"
+                              onClick={() => {
+                                if (selectedBucket) {
+                                  updateShowFlagAPI(tableName, taskId, selectedBucket, toast);
+                                }
+                                setIsOpen(false); // Close the dialog after confirmation
+                              }}
+                              ml={3}
+                            >
+                              Confirm
+                            </Button>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
                       </AlertDialog>
                     </Card>
                   );
