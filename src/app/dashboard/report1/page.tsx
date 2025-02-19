@@ -1,6 +1,12 @@
 'use client';
 
 import {
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
   Box,
   Button,
   Card,
@@ -28,29 +34,21 @@ import {
   Toast,
   Tooltip,
   Tr,
-  AlertDialog,
-  AlertDialogBody,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogContent,
-  AlertDialogOverlay,
   useColorMode,
 } from '@chakra-ui/react';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { FaCheckCircle, FaFlag, FaInfoCircle } from 'react-icons/fa';
+import { FaCheckCircle, FaInfoCircle } from 'react-icons/fa';
 import { GrTooltip } from 'react-icons/gr';
 import { MdDelete, MdDownload } from 'react-icons/md';
 import { fetchBucketComments, fetchBucketData } from 'utils/api/report';
 import ShowBucketColumns from './ShowBucketColumns';
-import { useToast } from "@chakra-ui/react";
 
 import {
   BackendDataResponse,
-  Column,
   BucketCommentResponse,
+  Column,
 } from '../../../types/report';
-import { queryClient } from 'app/AppWrappers';
 
 // ============================== Table Names ==============================
 // tbl_amazonsellerdetails_ia
@@ -58,7 +56,7 @@ const seller_table = 'kevin_testing';
 const product_details = 'ddmapp_amazonproductdetailsnew_data_1028';
 const product_list = 'ddmapp_amazonproductlist_data_1028';
 
-const tableName: string = seller_table;
+const tableName: string = "amazon_seller_5lakh";
 
 // ============================ Table Component ============================
 function showTable(
@@ -170,6 +168,20 @@ const Page: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const cancelRef = useRef();
 
+  useEffect(() => {
+    if (popoverRef.current) {
+      const popoverRect = popoverRef.current.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+
+      // If popover is overflowing on the right, move it to the left
+      if (popoverRect.right > viewportWidth) {
+        setPlacement('left-start');
+      } else {
+        setPlacement('right-start');
+      }
+    }
+  }, []);
+
   // Fetch bucket data when taskId is set
   const { data, isLoading, error } = useQuery<BackendDataResponse>({
     queryKey: ['backendData', tableName, taskId],
@@ -201,7 +213,7 @@ const Page: React.FC = () => {
     tableName: string,
     taskId: number,
     bucketName: string,
-    toast: any // Passing toast as a parameter
+    toast: any
   ) => {
     try {
       const queryParams = new URLSearchParams({ bucket_name: bucketName }).toString();
@@ -221,7 +233,7 @@ const Page: React.FC = () => {
       }
 
       const data = await response.json();
-      console.log(data);
+      // console.log(data);
 
       // Show success toast
       toast({
@@ -261,7 +273,7 @@ const Page: React.FC = () => {
     setShowBucketColumns(true);
     setTimeout(() => {
       columnCountRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 200);
+    }, 500);
   };
 
   const renderSkeletons = () => {
@@ -284,7 +296,7 @@ const Page: React.FC = () => {
   const handleDownload = async (tableName: string, taskId: number, bucket: string, columns: Column[]): Promise<void> => {
     try {
       // Check the value of selectedColumns before using it
-      console.log('Selected Columns:', columns);
+      // console.log('Selected Columns:', columns);
 
       // Ensure selectedColumns is properly initialized
       if (!columns || !Array.isArray(columns)) {
@@ -296,7 +308,7 @@ const Page: React.FC = () => {
         .map((col: { column_name: string }) => `columns=${encodeURIComponent(col.column_name)}`)
         .join('&');
 
-      console.log('Query Parameters:', queryParams); // Log the query parameters being sent to the backend
+      // console.log('Query Parameters:', queryParams); // Log the query parameters being sent to the backend
 
       const apiUrl = `http://localhost:8000/${tableName}/task_id/${taskId}/download-sample/${bucket}/?${queryParams}`;
 
@@ -327,20 +339,6 @@ const Page: React.FC = () => {
       console.error('Error downloading file:', error);
     }
   };
-
-  useEffect(() => {
-    if (popoverRef.current) {
-      const popoverRect = popoverRef.current.getBoundingClientRect();
-      const viewportWidth = window.innerWidth;
-
-      // If popover is overflowing on the right, move it to the left
-      if (popoverRect.right > viewportWidth) {
-        setPlacement('left-start');
-      } else {
-        setPlacement('right-start');
-      }
-    }
-  }, []);
 
   return (
     <Box position="relative" p={6}>
@@ -449,7 +447,7 @@ const Page: React.FC = () => {
                     Show_Flag
                   },
                 ]) => {
-                  if (Show_Flag !== true) return null;
+                  if (Show_Flag != true) return null;
                   // Extract comment counts and bucket comments
                   const commentCounts = bucketComment
                     ? Object.fromEntries(
@@ -713,6 +711,7 @@ const Page: React.FC = () => {
                           <button
                             onClick={(event) => {
                               event.stopPropagation();
+                              setSelectedBucket(bucketName); // Set the selected bucket
                               setIsOpen(true); // Open the confirmation dialog
                             }}
                             style={{ background: "none", border: "none", cursor: "pointer" }}
@@ -733,7 +732,7 @@ const Page: React.FC = () => {
                             </AlertDialogHeader>
 
                             <AlertDialogBody>
-                              Are you sure you want to delete this cluster? Once deleted, it cannot be restored.
+                              Are you sure you want to delete the cluster "{selectedBucket}" ? Once deleted, it cannot be restored.
                             </AlertDialogBody>
 
                             <AlertDialogFooter>
@@ -743,7 +742,9 @@ const Page: React.FC = () => {
                               <Button
                                 colorScheme="red"
                                 onClick={() => {
-                                  updateShowFlagAPI(tableName, taskId, bucketName, Toast);
+                                  if (selectedBucket) {
+                                    updateShowFlagAPI(tableName, taskId, selectedBucket, Toast);
+                                  }
                                   setIsOpen(false); // Close the dialog after confirmation
                                 }}
                                 ml={3}
