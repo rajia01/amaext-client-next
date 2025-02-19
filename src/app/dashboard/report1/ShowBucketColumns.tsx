@@ -290,28 +290,27 @@ const ShowBucketColumns: React.FC<ColumnCountProps> = ({
                           boxShadow="lg"
                           borderRadius="md"
                           p={3}
-                          maxH="400px" // Set max height for content
+                          maxH="280px" // Set max height for content
                           overflowY="auto" // Enable vertical scrolling if content exceeds max height
+                          maxWidth="1000px" // Set a max width to prevent excessive stretching
+                          minW="200px"
                         >
                           <PopoverCloseButton color="black" />
                           <PopoverBody textAlign="left">
                             {columnComments[item.column_name]?.length > 0 ? (
-                              <Box
-                                display="flex"
-                                flexDirection="column"
-                                gap={2}
-                              >
-                                {columnComments[item.column_name].map(
-                                  (comment, i) => (
-                                    <Box key={i}>
-                                      <Box fontSize="sm" color="black">
-                                        <strong>{i + 1}.</strong> {comment.text}
-                                      </Box>
-                                      <Box fontSize="xs" color="gray.600">
-                                        {new Date(
-                                          comment.timestamp,
-                                        ).toLocaleString()}
-                                      </Box>
+                              <Box display="flex" flexDirection="column" gap={2}>
+                                {columnComments[item.column_name].map((comment, i) => (
+                                  <Box key={i}>
+                                    <Box
+                                      fontSize="sm"
+                                      color="black"
+                                      maxWidth="100%" // Ensure it respects the parent width
+                                      whiteSpace="normal" // Allow wrapping
+                                      wordBreak="break-word" >
+                                      <strong>{i + 1}.</strong> {comment.text}
+                                    </Box>
+                                    <Box fontSize="xs" color="gray.600">
+                                      {new Date(comment.timestamp).toLocaleString()}
                                     </Box>
                                   ),
                                 )}

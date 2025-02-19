@@ -35,6 +35,7 @@ import {
   Tooltip,
   Tr,
   useColorMode,
+  useToast,
 } from '@chakra-ui/react';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
@@ -69,10 +70,10 @@ function showTable(
       <Table variant="simple" size="sm">
         <Thead>
           <Tr>
-            <Th sx={{ color: colorMode === 'light' ? 'black' : 'white' }}>
+            <Th sx={{ color: colorMode === 'light' ? 'white' : 'black' }}>
               Column
             </Th>
-            <Th sx={{ color: colorMode === 'light' ? 'black' : 'white' }}>
+            <Th sx={{ color: colorMode === 'light' ? 'white' : 'black' }}>
               Null Count
             </Th>
           </Tr>
@@ -85,8 +86,8 @@ function showTable(
                   Pivot_Columns.includes(column.column_name)
                     ? 'red.500'
                     : colorMode === 'light'
-                    ? 'black'
-                    : 'white'
+                      ? 'white'
+                      : 'black'
                 }
               >
                 {Pivot_Columns.includes(column.column_name) ? (
@@ -166,6 +167,7 @@ const Page: React.FC = () => {
   const taskIdInputRef = useRef<HTMLInputElement>(null);
   const columnCountRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement | null>(null);
+  const toast = useToast(); // ✅ Ensure toast is initialized properly
   const [isOpen, setIsOpen] = useState(false);
   const cancelRef = useRef();
 
@@ -202,11 +204,28 @@ const Page: React.FC = () => {
   const handleTaskIdKeyPress = () => {
     const inputValue = taskIdInputRef.current?.value;
     const newTaskId = Number(inputValue);
-    if (!isNaN(newTaskId)) {
-      setTaskId(newTaskId);
-      setShowBucketColumns(false);
-      setLastFetchTimestamp(Date.now());
+    if (!inputValue || isNaN(newTaskId)) {
+      toast({
+        title: "Task ID Required",
+        description: "Please enter a valid Task ID before proceeding.",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
     }
+    
+    setTaskId(newTaskId);
+    setShowBucketColumns(false);
+    setLastFetchTimestamp(Date.now());
+    
+    toast({
+      title: "Task ID Set",
+      description: `Task ID ${newTaskId} has been successfully set.`,
+      status: "success",
+      duration: 1000,
+      isClosable: true,
+    });
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -252,11 +271,10 @@ const Page: React.FC = () => {
       // Show success toast
       toast({
         title: `Flag set to false for ${bucketName}`,
-        description: 'The show flag has been successfully updated.',
-        status: 'success',
+        description: "The show flag has been successfully updated.",
+        status: "success",
         duration: 3000,
         isClosable: true,
-        position: 'top-right',
       });
 
       return data;
@@ -270,7 +288,6 @@ const Page: React.FC = () => {
         status: 'error',
         duration: 3000,
         isClosable: true,
-        position: 'top-right',
       });
     }
   };
@@ -305,12 +322,7 @@ const Page: React.FC = () => {
     ));
   };
 
-  const handleDownload = async (
-    tableName: string,
-    taskId: number,
-    bucket: string,
-    columns: Column[],
-  ): Promise<void> => {
+  const handleDownload = async (tableName: string, taskId: number, bucket: string, columns: Column[], toast: ReturnType<typeof useToast>): Promise<void> => {
     try {
       // Ensure selectedColumns is properly initialized
       if (!columns || !Array.isArray(columns)) {
@@ -350,10 +362,38 @@ const Page: React.FC = () => {
 
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download Successful",
+        description: `The sample file for ${bucket} has been downloaded.`,
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
     } catch (error) {
-      console.error('Error downloading file:', error);
+      console.error("Error downloading file:", error);
+
+      toast({
+        title: "Download Failed",
+        description: "Could not download the file. Please try again.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
     }
   };
+
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error Fetching Data",
+        description: "There was a problem retrieving the data. Please try again later.",
+        status: "error",
+        duration: 4000,
+        isClosable: true,
+      });
+    }
+  }, [error, toast]);
 
   return (
     <Box position="relative" p={7} pt={0}>
@@ -799,62 +839,62 @@ const Page: React.FC = () => {
                             >
                               <MdDelete size="1.5rem" />
                             </button>
-                          </Tooltip>
-                        </Box>
-                        <AlertDialog
-                          isOpen={isOpen}
-                          leastDestructiveRef={cancelRef}
-                          onClose={() => setIsOpen(false)}
-                        >
-                          <AlertDialogOverlay>
-                            <AlertDialogContent>
-                              <AlertDialogHeader
-                                fontSize="lg"
-                                fontWeight="bold"
-                              >
-                                Confirm Deletion
-                              </AlertDialogHeader>
+                          )}
+                        </Tooltip>
+                      </Box>
+                      <Box position="absolute" bottom={2} right={2}>
+                        <Tooltip label="Remove this cluster" fontSize="sm" placement="top">
+                          <button
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setSelectedBucket(bucketName); // Set the selected bucket
+                              setIsOpen(true); // Open the confirmation dialog
+                            }}
+                            style={{ background: "none", border: "none", cursor: "pointer" }}
+                          >
+                            <MdDelete size="1.5rem" />
+                          </button>
+                        </Tooltip>
+                      </Box>
+                      <AlertDialog
+                        isOpen={isOpen}
+                        leastDestructiveRef={cancelRef}
+                        onClose={() => setIsOpen(false)}
+                      >
+                        <AlertDialogContent>
+                          <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                            Confirm Deletion
+                          </AlertDialogHeader>
 
-                              <AlertDialogBody>
-                                Are you sure you want to delete the cluster "
-                                {selectedBucket}" ? Once deleted, it cannot be
-                                restored.
-                              </AlertDialogBody>
+                          <AlertDialogBody>
+                            Are you sure you want to delete the cluster `{selectedBucket}` ? Once deleted, it cannot be restored.
+                          </AlertDialogBody>
 
-                              <AlertDialogFooter>
-                                <Button
-                                  ref={cancelRef}
-                                  onClick={() => setIsOpen(false)}
-                                >
-                                  Cancel
-                                </Button>
-                                <Button
-                                  colorScheme="red"
-                                  onClick={() => {
-                                    if (selectedBucket) {
-                                      updateShowFlagAPI(
-                                        tableName,
-                                        taskId,
-                                        selectedBucket,
-                                        Toast,
-                                      );
-                                    }
-                                    setIsOpen(false);
-                                  }}
-                                  ml={3}
-                                >
-                                  Confirm
-                                </Button>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialogOverlay>
-                        </AlertDialog>
-                      </Card>
-                    );
-                  },
-                )}
-            </SimpleGrid>
-          </Box>
+                          <AlertDialogFooter>
+                            <Button ref={cancelRef} onClick={() => setIsOpen(false)}>
+                              Cancel
+                            </Button>
+                            <Button
+                              colorScheme="red"
+                              onClick={() => {
+                                if (selectedBucket) {
+                                  updateShowFlagAPI(tableName, taskId, selectedBucket, toast);
+                                }
+                                setIsOpen(false); // Close the dialog after confirmation
+                              }}
+                              ml={3}
+                            >
+                              Confirm
+                            </Button>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </Card>
+                  );
+                },
+              )}
+          </SimpleGrid>
+        </Box>
         )
       ) : (
         <Box
