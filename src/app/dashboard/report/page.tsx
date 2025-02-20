@@ -413,6 +413,7 @@ const Page: React.FC = () => {
               alignItems="stretch"
               display="grid"
               mt="20px"
+              mb="20px"
               gridTemplateColumns="repeat(auto-fit, minmax(370px, 1fr))"
               marginX="20px"
             >
