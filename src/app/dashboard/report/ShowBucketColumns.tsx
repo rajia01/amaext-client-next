@@ -116,9 +116,9 @@ const ShowBucketColumns: React.FC<ColumnCountProps> = ({
         columnCommentCounts[columnName] = columnData.column_comment_count || 0;
         columnComments[columnName] = columnData.column_comments
           ? columnData.column_comments.map((comment: ColumnComments) => ({
-              text: comment.text,
-              timestamp: comment['time-stamp'], // Extract timestamp
-            }))
+            text: comment.text,
+            timestamp: comment['time-stamp'], // Extract timestamp
+          }))
           : []; // Fallback to empty array if undefined
       },
     );
@@ -158,6 +158,11 @@ const ShowBucketColumns: React.FC<ColumnCountProps> = ({
       }
     }, 50);
   };
+
+  useEffect(() => {
+    // Reset null records when bucket changes
+    setSelectedColumnsForNullRecords(null);
+  }, [selectedBucket]);
 
   // =========================================== Page component ===========================================
   return (
