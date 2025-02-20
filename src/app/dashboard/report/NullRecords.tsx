@@ -39,7 +39,7 @@ interface Record {
   link: string;
   created_date: string;
   modified_date: string;
-  date_diff: string;
+  Date_Diff: string;
   comments: string;
 }
 
@@ -310,7 +310,7 @@ const NullRecords: React.FC<NullRecordsProps> = ({
                       </Td>
                       <Td>{record.created_date}</Td>
                       <Td>{record.modified_date}</Td>
-                      <Td>{record.date_diff}</Td>
+                      <Td>{record.Date_Diff}</Td>
                     </Tr>
                   ))
                 ) : (
