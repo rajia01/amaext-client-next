@@ -11,7 +11,7 @@ export const getDataView = async (
 ) => {
   try {
     const response = await axios.get(`${url}/${tableName}/${taskId}/sr/${id}`);
-    // console.log('DB Record: ', response.data);
+    console.log('DB Record: ', response.data);
     return response.data;
     //
   } catch (error) {
@@ -58,26 +58,35 @@ export const addComment = async (
 };
 
 // ====================================== Null Count columnwise ======================================
+
 export const fetchPaginatedData = async (
   tableName: string,
   taskId: number,
   page: number,
   rowsPerPage: number,
-  selectedBucket: string, // Add selected bucket
+  selectedBucket: string,
 ) => {
   try {
-    // console.log(
-    //   `Fetching paginated data for ${tableName}, Task ID: ${taskId}, Page: ${page}, Bucket: ${selectedBucket}`,
-    // );
-
     const response = await axios.get(`${url}/${tableName}/task_id/${taskId}`, {
       params: { page_no: page, page_per: rowsPerPage },
     });
 
     const data = response.data;
 
-    // Get only the selected bucket's columns
-    const selectedColumns = data.buckets[selectedBucket]?.columns || [];
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid API response format.');
+    }
+
+    if (!data[selectedBucket]) {
+      console.error(
+        `Error: Selected bucket '${selectedBucket}' not found. Available Buckets:`,
+        Object.keys(data),
+      );
+      throw new Error(`Bucket '${selectedBucket}' not found.`);
+    }
+
+    // Get the selected bucket's columns
+    const selectedColumns = data[selectedBucket]?.columns || [];
 
     return {
       total_count: selectedColumns.length,

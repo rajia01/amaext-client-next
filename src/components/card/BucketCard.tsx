@@ -14,6 +14,7 @@ import {
   PopoverCloseButton,
   PopoverContent,
   PopoverTrigger,
+  Spinner,
   Table,
   TableContainer,
   Tbody,
@@ -56,6 +57,7 @@ interface BucketCardProps {
     bucketName: string,
     columns: Column[],
     pivotColumns: string[],
+    columnInterDependency: string,
   ) => void;
   commentCounts: Record<string, number>;
   bucketComments: Record<string, Comment[]>;
@@ -77,6 +79,7 @@ interface BucketCardProps {
   selectedBucket: string;
   isOpen: boolean;
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  loadingDownloads: Record<string, boolean>;
 }
 
 const BucketCard: React.FC<BucketCardProps> = ({
@@ -94,9 +97,11 @@ const BucketCard: React.FC<BucketCardProps> = ({
   selectedBucket,
   isOpen,
   setIsOpen,
+  loadingDownloads,
 }) => {
   const { colorMode } = useColorMode();
   const cancelRef = useRef();
+  const isDownloading = loadingDownloads[bucketName];
 
   const {
     columns = [],
@@ -125,6 +130,7 @@ const BucketCard: React.FC<BucketCardProps> = ({
           bucketName,
           data[bucketName]?.columns || [],
           data[bucketName]?.Pivot_Columns || [],
+          data[bucketName]?.Column_Inter_Dependency || [],
         )
       } // Pass Pivot_Columns here
     >
@@ -187,23 +193,23 @@ const BucketCard: React.FC<BucketCardProps> = ({
                   {
                     typeof Column_Inter_Dependency === 'string'
                       ? // Check if the string can be parsed as a number
-                        !isNaN(parseFloat(Column_Inter_Dependency))
+                      !isNaN(parseFloat(Column_Inter_Dependency))
                         ? // If it's a number (as string), truncate to two decimals
-                          parseFloat(Column_Inter_Dependency)
-                            .toString()
-                            .slice(
-                              0,
-                              Column_Inter_Dependency.indexOf('.') + 3,
-                            ) + '%' // Truncate after two decimal places
-                        : // If it's not a number, display it as is (e.g., "Full", "Empty")
-                          Column_Inter_Dependency
-                      : // For numbers, truncate to two decimal places
-                        parseFloat(Column_Inter_Dependency.toString())
+                        parseFloat(Column_Inter_Dependency)
                           .toString()
                           .slice(
                             0,
-                            Column_Inter_Dependency.toString().indexOf('.') + 3,
-                          ) + '%' // Truncate to two decimal places
+                            Column_Inter_Dependency.indexOf('.') + 3,
+                          ) + '%' // Truncate after two decimal places
+                        : // If it's not a number, display it as is (e.g., "Full", "Empty")
+                        Column_Inter_Dependency
+                      : // For numbers, truncate to two decimal places
+                      parseFloat(Column_Inter_Dependency.toString())
+                        .toString()
+                        .slice(
+                          0,
+                          Column_Inter_Dependency.toString().indexOf('.') + 3,
+                        ) + '%' // Truncate to two decimal places
                   }
                 </Td>
               </Tr>
@@ -224,98 +230,96 @@ const BucketCard: React.FC<BucketCardProps> = ({
               <Tr>
                 <Td fontWeight="bold">Comments</Td>
                 <Td textAlign="right">
-                  <Box display="flex" gap="10px" justifyContent="end">
-                    {/* Comment Count */}
-                    <Box
-                      display="inline-flex"
-                      alignItems="center"
-                      justifyContent="center"
-                      px="0.4rem"
-                      py="0.1rem"
-                      border="1px solid #ccc"
-                      borderRadius="4px"
-                      fontSize="0.9rem"
-                      fontWeight="bold"
-                      backgroundColor="gray.100"
-                      color="black"
-                      minWidth="24px"
-                      textAlign="center"
-                    >
-                      {commentCounts?.[bucketName] || 0}
-                    </Box>
-
-                    <Popover trigger="click" placement="top">
-                      <PopoverTrigger>
-                        <Box
-                          as="button"
-                          onClick={(
-                            event: React.MouseEvent<HTMLButtonElement>,
-                          ) => event.stopPropagation()} // Prevents card click
-                        >
-                          <GrTooltip
-                            style={{
-                              fontSize: '1.5rem',
-                              cursor: 'pointer',
-                              color: '#007bff',
-                            }}
-                          />
-                        </Box>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        onClick={(event: React.MouseEvent<HTMLButtonElement>) =>
-                          event.stopPropagation()
-                        }
-                        bg="gray.100"
-                        boxShadow="lg"
-                        borderRadius="md"
-                        p={3}
-                        maxH="200px" // Set max height for the popover
-                        overflowY="auto" // Enable vertical scrolling
-                        maxWidth="1000px" // Set a max width to prevent excessive stretching
-                        minW="200px" // Prevent the popover from becoming too narrow
+                  {Column_Inter_Dependency === 'Full' ? 'N/A' : (
+                    <Box display="flex" gap="10px" justifyContent="end">
+                      {/* Comment Count */}
+                      <Box
+                        display="inline-flex"
+                        alignItems="center"
+                        justifyContent="center"
+                        px="0.4rem"
+                        py="0.1rem"
+                        border="1px solid #ccc"
+                        borderRadius="4px"
+                        fontSize="0.9rem"
+                        fontWeight="bold"
+                        backgroundColor="gray.100"
+                        color="black"
+                        minWidth="24px"
+                        textAlign="center"
                       >
-                        <PopoverCloseButton color="black" />
-                        <PopoverBody textAlign="left">
-                          {bucketComments?.[bucketName]?.length > 0 ? (
-                            <Box display="flex" flexDirection="column" gap={2}>
-                              {bucketComments[bucketName]
-                                .filter((comment) => comment && comment.text) // Ensure comment is not null/undefined
-                                .map((comment, index) => (
-                                  <Box key={index}>
-                                    <Box
-                                      fontSize="sm"
-                                      color="black"
-                                      maxWidth="100%" // Ensure it respects the parent width
-                                      whiteSpace="normal" // Allow wrapping
-                                      wordBreak="break-word" // Break long words
-                                    >
-                                      <strong>{index + 1}.</strong>{' '}
-                                      {comment?.text || 'No text available'}
+                        {commentCounts?.[bucketName] || 0}
+                      </Box>
+
+                      <Popover trigger="click" placement="top">
+                        <PopoverTrigger>
+                          <Box
+                            as="button"
+                            onClick={(event: React.MouseEvent<HTMLButtonElement>) =>
+                              event.stopPropagation()} // Prevents card click
+                          >
+                            <GrTooltip
+                              style={{
+                                fontSize: '1.5rem',
+                                cursor: 'pointer',
+                                color: '#007bff',
+                              }}
+                            />
+                          </Box>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          onClick={(event: React.MouseEvent<HTMLButtonElement>) =>
+                            event.stopPropagation()}
+                          bg="gray.100"
+                          boxShadow="lg"
+                          borderRadius="md"
+                          p={3}
+                          maxH="200px"
+                          overflowY="auto"
+                          maxWidth="1000px"
+                          minW="200px"
+                        >
+                          <PopoverCloseButton color="black" />
+                          <PopoverBody textAlign="left">
+                            {bucketComments?.[bucketName]?.length > 0 ? (
+                              <Box display="flex" flexDirection="column" gap={2}>
+                                {bucketComments[bucketName]
+                                  .filter((comment) => comment && comment.text)
+                                  .map((comment, index) => (
+                                    <Box key={index}>
+                                      <Box
+                                        fontSize="sm"
+                                        color="black"
+                                        maxWidth="100%"
+                                        whiteSpace="normal"
+                                        wordBreak="break-word"
+                                      >
+                                        <strong>{index + 1}.</strong>{' '}
+                                        {comment?.text || 'No text available'}
+                                      </Box>
+                                      <Box fontSize="xs" color="gray.600">
+                                        {comment?.['time-stamp']
+                                          ? new Date(comment['time-stamp']).toLocaleString()
+                                          : 'No timestamp'}
+                                      </Box>
                                     </Box>
-                                    <Box fontSize="xs" color="gray.600">
-                                      {comment?.['time-stamp']
-                                        ? new Date(
-                                            comment['time-stamp'],
-                                          ).toLocaleString()
-                                        : 'No timestamp'}
-                                    </Box>
-                                  </Box>
-                                ))}
-                            </Box>
-                          ) : (
-                            <Box
-                              textAlign="center"
-                              fontSize="sm"
-                              fontWeight="bold"
-                              color="gray.600"
-                            >
-                              No comments available
-                            </Box>
-                          )}
-                        </PopoverBody>
-                      </PopoverContent>
-                    </Popover>
-                  </Box>
+                                  ))}
+                              </Box>
+                            ) : (
+                              <Box
+                                textAlign="center"
+                                fontSize="sm"
+                                fontWeight="bold"
+                                color="gray.600"
+                              >
+                                No comments available
+                              </Box>
+                            )}
+                          </PopoverBody>
+                        </PopoverContent>
+                      </Popover>
+                    </Box>
+                  )}
                 </Td>
               </Tr>
             </Tbody>
@@ -323,21 +327,21 @@ const BucketCard: React.FC<BucketCardProps> = ({
         </TableContainer>
       </CardHeader>
       <Box position="absolute" top={2} left={2}>
-        <Tooltip
-          label="Click to download 100 samples"
-          fontSize="sm"
-          placement="top"
-        >
-          {/* Only render the button if Common_Null_Count is greater than 0 */}
+        <Tooltip label="Click to download 100 samples" fontSize="sm" placement="top">
           {Common_Null_Count > 0 && (
             <button
               onClick={(event) => {
-                event.stopPropagation(); // Prevent the card's onClick from triggering
-
+                event.stopPropagation();
                 handleDownload(tableName, taskId, bucketName, columns, toast);
               }}
+              disabled={isDownloading} // Disable button while downloading
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: isDownloading ? 'not-allowed' : 'pointer',
+              }}
             >
-              <MdDownload size="1.5rem" />
+              {isDownloading ? <Spinner size="sm" /> : <MdDownload size="1.5rem" />}
             </button>
           )}
         </Tooltip>

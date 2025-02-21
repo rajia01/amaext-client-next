@@ -39,6 +39,8 @@ interface ColumnCountProps {
   tableName: string;
   selectedColumns: { column_name: string; null_count: number }[];
   selectedBucket: string;
+  columnInterDependency: string;
+  columnLength: number
 }
 
 interface ColumnComments {
@@ -63,6 +65,8 @@ const ShowBucketColumns: React.FC<ColumnCountProps> = ({
   tableName,
   selectedColumns,
   selectedBucket,
+  columnInterDependency,
+  columnLength
 }) => {
   const [selectedColumnsForNullRecords, setSelectedColumnsForNullRecords] =
     useState<string[] | null>(null);
@@ -253,95 +257,87 @@ const ShowBucketColumns: React.FC<ColumnCountProps> = ({
                       )}
                     </div>
                   </Td>
-                  <Td textAlign="right">
-                    <Box display="flex" alignItems="center" gap={6}>
-                      <Box
-                        px="0.4rem"
-                        py="0.1rem"
-                        border="1px solid #ccc"
-                        borderRadius="4px"
-                        fontSize="0.9rem"
-                        fontWeight="bold"
-                        backgroundColor="gray.100"
-                        color="black"
-                        minWidth="30px"
-                        textAlign="center"
-                      >
-                        {columnCommentCounts[item.column_name] || 0}
-                      </Box>
-                      <Popover trigger="click" placement="top">
-                        <PopoverTrigger>
-                          <Box
-                            as="button"
-                            onClick={(
-                              event: React.MouseEvent<HTMLButtonElement>,
-                            ) => event.stopPropagation()} // Prevents popover closing on button click
-                          >
-                            <GrTooltip
-                              style={{
-                                fontSize: '1.5rem',
-                                cursor: 'pointer',
-                                color: '#007bff',
-                              }}
-                            />
-                          </Box>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          onClick={(
-                            event: React.MouseEvent<HTMLButtonElement>,
-                          ) => event.stopPropagation()} // Prevents popover closing on content click
-                          bg="gray.100"
-                          boxShadow="lg"
-                          borderRadius="md"
-                          p={3}
-                          maxH="200px" // Set max height for content
-                          overflowY="auto" // Enable vertical scrolling if content exceeds max height
-                          maxWidth="1000px" // Set a max width to prevent excessive stretching
-                          minW="200px"
+                  <Td textAlign="left">
+                    {columnInterDependency === 'Full' ? 'N/A' : (
+                      <Box display="flex" alignItems="center" gap={6}>
+                        <Box
+                          px="0.4rem"
+                          py="0.1rem"
+                          border="1px solid #ccc"
+                          borderRadius="4px"
+                          fontSize="0.9rem"
+                          fontWeight="bold"
+                          backgroundColor="gray.100"
+                          color="black"
+                          minWidth="30px"
+                          textAlign="center"
                         >
-                          <PopoverCloseButton color="black" />
-                          <PopoverBody textAlign="left">
-                            {columnComments[item.column_name]?.length > 0 ? (
-                              <Box
-                                display="flex"
-                                flexDirection="column"
-                                gap={2}
-                              >
-                                {columnComments[item.column_name].map(
-                                  (comment, i) => (
+                          {columnCommentCounts[item.column_name] || 0}
+                        </Box>
+                        <Popover trigger="click" placement="top">
+                          <PopoverTrigger>
+                            <Box
+                              as="button"
+                              onClick={(event: React.MouseEvent<HTMLButtonElement>) =>
+                                event.stopPropagation()} // Prevents popover closing on button click
+                            >
+                              <GrTooltip
+                                style={{
+                                  fontSize: '1.5rem',
+                                  cursor: 'pointer',
+                                  color: '#007bff',
+                                }}
+                              />
+                            </Box>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            onClick={(event: React.MouseEvent<HTMLButtonElement>) =>
+                              event.stopPropagation()} // Prevents popover closing on content click
+                            bg="gray.100"
+                            boxShadow="lg"
+                            borderRadius="md"
+                            p={3}
+                            maxH="200px"
+                            overflowY="auto"
+                            maxWidth="1000px"
+                            minW="200px"
+                          >
+                            <PopoverCloseButton color="black" />
+                            <PopoverBody textAlign="left">
+                              {columnComments[item.column_name]?.length > 0 ? (
+                                <Box display="flex" flexDirection="column" gap={2}>
+                                  {columnComments[item.column_name].map((comment, i) => (
                                     <Box key={i}>
                                       <Box
                                         fontSize="sm"
                                         color="black"
-                                        maxWidth="100%" // Ensure it respects the parent width
-                                        whiteSpace="normal" // Allow wrapping
+                                        maxWidth="100%"
+                                        whiteSpace="normal"
                                         wordBreak="break-word"
                                       >
                                         <strong>{i + 1}.</strong> {comment.text}
                                       </Box>
                                       <Box fontSize="xs" color="gray.600">
-                                        {new Date(
-                                          comment.timestamp,
-                                        ).toLocaleString()}
+                                        {new Date(comment.timestamp).toLocaleString()}
                                       </Box>
                                     </Box>
-                                  ),
-                                )}
-                              </Box>
-                            ) : (
-                              <Box
-                                textAlign="center"
-                                fontSize="sm"
-                                fontWeight="bold"
-                                color="gray.600"
-                              >
-                                No comments available
-                              </Box>
-                            )}
-                          </PopoverBody>
-                        </PopoverContent>
-                      </Popover>
-                    </Box>
+                                  ))}
+                                </Box>
+                              ) : (
+                                <Box
+                                  textAlign="center"
+                                  fontSize="sm"
+                                  fontWeight="bold"
+                                  color="gray.600"
+                                >
+                                  No comments available
+                                </Box>
+                              )}
+                            </PopoverBody>
+                          </PopoverContent>
+                        </Popover>
+                      </Box>
+                    )}
                   </Td>
                 </Tr>
               ))}
@@ -372,6 +368,8 @@ const ShowBucketColumns: React.FC<ColumnCountProps> = ({
             columnName={selectedColumnsForNullRecords} // Updated prop to accept an array
             tableName={tableName}
             bucketName={selectedBucket}
+            columnInterDependency={columnInterDependency}
+            columnLength={columnLength}
             onClose={() => setSelectedColumnsForNullRecords(null)}
           />
         </div>

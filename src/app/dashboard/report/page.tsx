@@ -29,10 +29,10 @@ import {
 // ========================================================================================================
 const testing_table = 'tbl_amazonsellerdetails_ia';
 const seller_table = 'amazon_seller_5lakh';
-const product_details = 'ddmapp_amazonproductdetailsnew_data_1028';
-const product_list = 'ddmapp_amazonproductlist_data_1028';
+const product_details = 'amazon_productdetails_bulktesting';
+const product_list = 'amazon_productlist_bulktesting';
 
-const tableName: string = seller_table;
+const tableName: string = product_details;
 
 // Page Component
 // ========================================================================================================
@@ -53,6 +53,8 @@ const Page: React.FC = () => {
   const popoverRef = useRef<HTMLDivElement | null>(null);
   const toast = useToast(); // ✅ Ensure toast is initialized properly
   const [isOpen, setIsOpen] = useState(false);
+  const [columnInterDependency, setColumnInterDependency] = useState<string | null>(null);
+  const [loadingDownloads, setLoadingDownloads] = useState<Record<string, boolean>>({});
   const cancelRef = useRef();
 
   // API Calls
@@ -107,7 +109,7 @@ const Page: React.FC = () => {
       setLastFetchTimestamp(Date.now());
       toast({
         title: `Flag set to false for ${bucketName}`,
-        description: 'The show flag has been successfully updated.',
+        description: `${bucketName} removed successfully `,
         status: 'success',
         duration: 3000,
         isClosable: true,
@@ -193,10 +195,12 @@ const Page: React.FC = () => {
     bucketName: string,
     columns: { column_name: string; null_count: number }[],
     Pivot_Columns: string[], // Make sure pivot columns are passed
+    columnInterDependency: string,
   ) => {
     setSelectedColumns(columns);
     setSelectedBucket(bucketName);
     setShowBucketColumns(true);
+    setColumnInterDependency(columnInterDependency);
     setTimeout(() => {
       columnCountRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 500);
@@ -210,42 +214,35 @@ const Page: React.FC = () => {
     toast: ReturnType<typeof useToast>,
   ): Promise<void> => {
     try {
-      // Ensure selectedColumns is properly initialized
+      setLoadingDownloads((prev) => ({ ...prev, [bucket]: true })); // Start loading
+
       if (!columns || !Array.isArray(columns)) {
-        throw new Error('selectedColumns is null or not an array');
+        throw new Error('Columns are not properly defined');
       }
 
-      // Extract only column names from selectedColumns
       const queryParams = columns
-        .map(
-          (col: { column_name: string }) =>
-            `columns=${encodeURIComponent(col.column_name)}`,
-        )
+        .map((col) => `columns=${encodeURIComponent(col.column_name)}`)
         .join('&');
 
       const apiUrl = `http://localhost:8000/${tableName}/task_id/${taskId}/download-sample/${bucket}/?${queryParams}`;
 
       const response = await fetch(apiUrl, {
         method: 'GET',
-        headers: {
-          Accept: '*/*',
-        },
+        headers: { Accept: '*/*' },
       });
 
       if (!response.ok) {
         throw new Error('Failed to download file');
       }
 
-      // Convert response to a Blob and initiate file download
+      // Convert response to Blob and initiate file download
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-
       const a = document.createElement('a');
       a.href = url;
       a.download = `sample_data_${tableName}_${taskId}_${bucket}.csv`;
       document.body.appendChild(a);
       a.click();
-
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
@@ -258,7 +255,6 @@ const Page: React.FC = () => {
       });
     } catch (error) {
       console.error('Error downloading file:', error);
-
       toast({
         title: 'Download Failed',
         description: 'Could not download the file. Please try again.',
@@ -266,6 +262,8 @@ const Page: React.FC = () => {
         duration: 3000,
         isClosable: true,
       });
+    } finally {
+      setLoadingDownloads((prev) => ({ ...prev, [bucket]: false })); // Stop loading
     }
   };
 
@@ -282,6 +280,8 @@ const Page: React.FC = () => {
   const handleConfirmDeletion = () => {
     if (selectedBucket) {
       updateShowFlagAPI(tableName, taskId, selectedBucket, toast);
+      setShowBucketColumns(false);
+      setSelectedBucket(null); // Clear the selected bucket as well
     }
     setIsOpen(false); // Close the dialog after confirmation
   };
@@ -315,6 +315,7 @@ const Page: React.FC = () => {
     }
   }, [error, toast]);
 
+  const visibleBuckets = data ? Object.entries(data).filter(([_, { Show_Flag }]) => Show_Flag === true) : [];
   // Page Component Return
   // ========================================================================================================
   return (
@@ -399,40 +400,50 @@ const Page: React.FC = () => {
             fontWeight="bold"
             color="red.500"
             height={['10vh', '30vh', '50vh']}
-            // border={'1px solid white'}
+          // border={'1px solid white'}
           >
             Error fetching data
           </Box>
         ) : (
           <Box width="100%" height="100%" overflowX="hidden" overflowY="hidden">
-            <SimpleGrid
-              columns={{ base: 1, sm: 2, md: 3, lg: 4 }}
-              spacing={6}
-              minChildWidth="370px"
-              justifyContent="center"
-              alignItems="stretch"
-              display="grid"
-              mt="20px"
-              mb="20px"
-              gridTemplateColumns="repeat(auto-fit, minmax(370px, 1fr))"
-              marginX="20px"
-            >
-              {data &&
-                Object.entries(data).map(
-                  ([
-                    bucketName,
-                    {
-                      columns,
-                      Column_Inter_Dependency,
-                      Common_Null_Count,
-                      Uncommon_Null_Count,
-                      Show_Flag,
-                    },
-                  ]) => {
-                    if (Show_Flag != true) return null;
-                    // Extract comment counts and bucket comments
-                    const commentCounts = bucketComment
-                      ? Object.fromEntries(
+            {/* Check if there are visible buckets */}
+            {data && Object.entries(data).filter(([_, { Show_Flag }]) => Show_Flag === true).length === 0 ? (
+              <Box
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                textAlign="center"
+                fontSize={['xl', '2xl', '3xl']}
+                fontWeight="bold"
+                height={['10vh', '30vh', '50vh']}
+              >
+                No buckets to show
+              </Box>
+            ) : (
+              <SimpleGrid
+                columns={{ base: 1, sm: 2, md: 3, lg: 4 }}
+                spacing={6}
+                minChildWidth="370px"
+                justifyContent="center"
+                alignItems="stretch"
+                display="grid"
+                mt="20px"
+                mb="20px"
+                gridTemplateColumns="repeat(auto-fit, minmax(370px, 1fr))"
+                marginX="20px"
+              >
+                {data &&
+                  Object.entries(data).map(
+                    ([
+                      bucketName,
+                      {
+                        Show_Flag,
+                      },
+                    ]) => {
+                      if (Show_Flag != true) return null;
+                      // Extract comment counts and bucket comments
+                      const commentCounts = bucketComment
+                        ? Object.fromEntries(
                           Object.entries(bucketComment).map(
                             ([name, bucketData]) => [
                               name,
@@ -440,10 +451,10 @@ const Page: React.FC = () => {
                             ],
                           ),
                         )
-                      : {};
+                        : {};
 
-                    const bucketComments = bucketComment
-                      ? Object.fromEntries(
+                      const bucketComments = bucketComment
+                        ? Object.fromEntries(
                           Object.entries(bucketComment).map(
                             ([name, bucketData]) => [
                               name,
@@ -451,30 +462,32 @@ const Page: React.FC = () => {
                             ],
                           ),
                         )
-                      : {};
+                        : {};
 
-                    return (
-                      <BucketCard
-                        key={bucketName}
-                        bucketName={bucketName}
-                        data={data}
-                        commentCounts={commentCounts}
-                        bucketComments={bucketComments}
-                        handleCardClick={handleCardClick}
-                        handleDownload={handleDownload}
-                        handleDelete={handleDelete}
-                        handleConfirmDeletion={handleConfirmDeletion}
-                        toast={toast}
-                        tableName={tableName}
-                        taskId={taskId}
-                        selectedBucket={selectedBucket}
-                        isOpen={isOpen}
-                        setIsOpen={setIsOpen}
-                      />
-                    );
-                  },
-                )}
-            </SimpleGrid>
+                      return (
+                        <BucketCard
+                          key={bucketName}
+                          bucketName={bucketName}
+                          data={data}
+                          commentCounts={commentCounts}
+                          bucketComments={bucketComments}
+                          handleCardClick={handleCardClick}
+                          handleDownload={handleDownload}
+                          handleDelete={handleDelete}
+                          handleConfirmDeletion={handleConfirmDeletion}
+                          toast={toast}
+                          tableName={tableName}
+                          taskId={taskId}
+                          selectedBucket={selectedBucket}
+                          isOpen={isOpen}
+                          setIsOpen={setIsOpen}
+                          loadingDownloads={loadingDownloads}
+                        />
+                      );
+                    },
+                  )}
+              </SimpleGrid>
+            )}
           </Box>
         )
       ) : (
@@ -498,6 +511,8 @@ const Page: React.FC = () => {
             tableName={tableName}
             selectedColumns={selectedColumns}
             selectedBucket={selectedBucket}
+            columnInterDependency={columnInterDependency}
+            columnLength={selectedColumns.length}
           />
         </Box>
       )}

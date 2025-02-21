@@ -31,6 +31,8 @@ interface NullRecordsProps {
   columnName: string[];
   tableName: string;
   bucketName: string;
+  columnInterDependency: string;
+  columnLength: number;
   onClose: () => void;
 }
 
@@ -48,6 +50,8 @@ const NullRecords: React.FC<NullRecordsProps> = ({
   columnName,
   tableName,
   bucketName,
+  columnInterDependency,
+  columnLength,
   onClose,
 }) => {
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
@@ -89,6 +93,12 @@ const NullRecords: React.FC<NullRecordsProps> = ({
         comment,
         isSingleColumn ? columnName[0] : undefined,
       );
+      // console.log("columnLength value:", columnLength, typeof columnLength);
+
+      // If columnLength is 1, call addComment again without the columnName
+      if (columnLength === 1) {
+        addComment(tableName, taskId, bucketName, comment);
+      }
 
       // Show success toast after submission
       toast({
@@ -250,6 +260,7 @@ const NullRecords: React.FC<NullRecordsProps> = ({
                 onClick={handleCommentSubmit}
                 size="md"
                 colorScheme="blue"
+                isDisabled={columnInterDependency === 'Full'}
               >
                 Submit
               </Button>
